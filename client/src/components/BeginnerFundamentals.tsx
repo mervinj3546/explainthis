@@ -179,6 +179,51 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
 
   const peAssessment = getRatioAssessment(apiData?.keyMetrics?.peRatio || 0, 'pe');
 
+  // Generate overall assessment
+  const getOverallAssessment = () => {
+    const peRatio = apiData?.keyMetrics?.peRatio || 0;
+    const roe = apiData?.financialHealth?.roe || 0;
+    const revenueGrowth = fundamentalsData?.growth?.revenueGrowth || 0;
+    const epsGrowth = fundamentalsData?.growth?.epsGrowth || 0;
+    
+    let positives = [];
+    let concerns = [];
+    let overall = "Mixed";
+    let overallColor = "text-yellow-500";
+    
+    // Check fundamentals
+    if (roe >= 15) positives.push("Strong profitability (ROE)");
+    else if (roe < 10) concerns.push("Low return on equity");
+    
+    if (revenueGrowth > 5) positives.push("Growing revenue");
+    else if (revenueGrowth < 0) concerns.push("Declining revenue");
+    
+    if (epsGrowth > 5) positives.push("Growing earnings");
+    else if (epsGrowth < -5) concerns.push("Declining earnings");
+    
+    if (peRatio < 15) positives.push("Good value (low P/E)");
+    else if (peRatio > 30) concerns.push("Expensive valuation");
+    
+    // Determine overall assessment
+    if (positives.length >= 3 && concerns.length <= 1) {
+      overall = "Strong Fundamentals";
+      overallColor = "text-green-500";
+    } else if (concerns.length >= 3 && positives.length <= 1) {
+      overall = "Weak Fundamentals";
+      overallColor = "text-red-500";
+    } else if (positives.length > concerns.length) {
+      overall = "Good Fundamentals";
+      overallColor = "text-blue-500";
+    } else if (concerns.length > positives.length) {
+      overall = "Concerning Fundamentals";
+      overallColor = "text-orange-500";
+    }
+    
+    return { overall, overallColor, positives, concerns };
+  };
+
+  const assessment = getOverallAssessment();
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
@@ -187,6 +232,68 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
           <h2 className="text-2xl font-bold text-white">Fundamentals Made Simple</h2>
           <div className="text-slate-400 text-sm">Perfect for beginners</div>
         </div>
+
+        {/* Summary Card */}
+        <Card className="bg-gradient-to-r from-slate-800 to-slate-700 border-slate-600">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-500" />
+              Quick Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Overall Assessment:</span>
+                <Badge variant="outline" className={`${assessment.overallColor} border-current`}>
+                  {assessment.overall}
+                </Badge>
+              </div>
+              
+              {assessment.positives.length > 0 && (
+                <div>
+                  <h4 className="text-green-400 font-medium mb-2 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Strengths
+                  </h4>
+                  <ul className="space-y-1">
+                    {assessment.positives.map((positive, index) => (
+                      <li key={index} className="text-slate-300 text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        {positive}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {assessment.concerns.length > 0 && (
+                <div>
+                  <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4" />
+                    Areas of Concern
+                  </h4>
+                  <ul className="space-y-1">
+                    {assessment.concerns.map((concern, index) => (
+                      <li key={index} className="text-slate-300 text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                        {concern}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div className="bg-slate-600/30 rounded-lg p-3">
+                <p className="text-slate-300 text-sm">
+                  <strong>For Beginners:</strong> Look at the complete picture - a company with growing revenue, 
+                  good profitability (ROE {'>'} 15%), and reasonable valuation (P/E {'<'} 25) typically makes a solid investment. 
+                  Don't focus on just one metric!
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Company Overview Card */}
         <Card className="bg-slate-800 border-slate-700">
