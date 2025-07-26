@@ -51,7 +51,7 @@ export default function Dashboard() {
             <div className="h-10 w-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
               <ChartLine className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white">Explain This Ticker</h1>
+            <h1 className="text-xl font-bold text-white">Should I buy this stock</h1>
           </div>
 
           {/* User Profile */}

@@ -1,8 +1,8 @@
-# Explain This Ticker - Financial Web Application
+# Should I buy this stock - Financial Web Application
 
 ## Overview
 
-This is a modern, full-stack financial web application called "Explain This Ticker" that provides stock market information and analysis. The application features a dark-themed UI built with React, TypeScript, and Tailwind CSS on the frontend, with an Express.js backend and in-memory storage for rapid development.
+This is a modern, full-stack financial web application called "Should I buy this stock" that provides stock market information and analysis. The application features a dark-themed UI built with React, TypeScript, and Tailwind CSS on the frontend, with an Express.js backend and PostgreSQL database for persistent storage.
 
 ## Recent Changes (January 26, 2025)
 
@@ -18,6 +18,13 @@ This is a modern, full-stack financial web application called "Explain This Tick
 - ✅ Converted sidebar to tabbed navigation (Favorites/Recently Searched)
 - ✅ Added star functionality to favorite tickers from search history
 - ✅ Added Financial Analysis and AI Analysis dashboard tabs
+- ✅ Rebranded app to "Should I buy this stock" throughout the application
+- ✅ Reorganized dashboard tabs: Primary Details, AI Analysis, Fundamentals, Technical Analysis, Retail vs Pro Sentiment
+- ✅ Combined Financial Analysis and Contextual Fundamentals into single Fundamentals tab
+- ✅ Created comprehensive homepage with hero section and features
+- ✅ Built pricing page with three tiers ($5.99, $9.99, $15.99) in table format
+- ✅ Added navigation pages: How to use this site, About us
+- ✅ Updated routing system to show homepage for logged-out users
 
 ## User Preferences
 
@@ -60,10 +67,12 @@ The application uses the following main entities:
 - **Ticker Data**: Store various types of market data (news, fundamentals, technical analysis, sentiment)
 
 ### Core Features
-- **Ticker Search**: Real-time stock symbol search functionality
+- **Homepage**: Marketing landing page with features overview and navigation
+- **Ticker Search**: Real-time stock symbol search functionality with history
 - **Dashboard**: Main interface showing selected ticker information
-- **Watchlist Management**: Add/remove stocks from personal watchlist
-- **Content Tabs**: Display different types of analysis (news, sentiment, fundamentals, technical)
+- **Watchlist Management**: Add/remove stocks from personal watchlist with star functionality
+- **Content Tabs**: Five organized tabs - Primary Details, AI Analysis, Fundamentals, Technical Analysis, Retail vs Pro Sentiment
+- **Navigation Pages**: Pricing, How to use, About us pages with consistent branding
 - **Responsive Design**: Mobile-first approach with dark theme
 
 ### UI Components

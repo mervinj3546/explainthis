@@ -7,6 +7,10 @@ import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
+import HomePage from "@/pages/home";
+import PricingPage from "@/pages/pricing";
+import HowToUsePage from "@/pages/how-to-use";
+import AboutPage from "@/pages/about";
 
 function Router() {
   const { user, isLoading } = useAuth();
@@ -28,8 +32,11 @@ function Router() {
     <Switch>
       {!user ? (
         <>
-          <Route path="/" component={Login} />
+          <Route path="/" component={HomePage} />
           <Route path="/login" component={Login} />
+          <Route path="/pricing" component={PricingPage} />
+          <Route path="/how-to-use" component={HowToUsePage} />
+          <Route path="/about" component={AboutPage} />
         </>
       ) : (
         <>
