@@ -7,6 +7,13 @@ import MemoryStore from "memorystore";
 
 const MemoryStoreSession = MemoryStore(session);
 
+// Extend session interface to include userId
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
   app.use(session({

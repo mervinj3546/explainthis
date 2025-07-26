@@ -89,6 +89,8 @@ export class MemStorage implements IStorage {
       ...insertUser,
       id,
       password: hashedPassword,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -120,6 +122,8 @@ export class MemStorage implements IStorage {
       id: randomUUID(),
       ...insertTicker,
       symbol: insertTicker.symbol.toUpperCase(),
+      volume: insertTicker.volume || null,
+      marketCap: insertTicker.marketCap || null,
       updatedAt: new Date(),
     };
     this.tickers.set(ticker.symbol, ticker);

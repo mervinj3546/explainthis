@@ -75,7 +75,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {newsData?.data?.items?.map((item: any, index: number) => (
+                  {(newsData?.data as any)?.items?.map((item: any, index: number) => (
                     <div key={index} className="border-l-4 border-green-500 pl-4">
                       <h4 className="font-medium text-white mb-1">{item.title}</h4>
                       <p className="text-slate-400 text-sm mb-2">{item.summary}</p>
@@ -106,13 +106,13 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Volume vs Average</span>
                     <span className="text-green-500 font-medium">
-                      +{technicalData?.data?.volume?.volumeRatio || 0}%
+                      +{(technicalData?.data as any)?.volume?.volumeRatio || 0}%
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-400">Current Volume</span>
                     <span className="text-blue-500 font-medium">
-                      {(technicalData?.data?.volume?.current || 0).toLocaleString()}
+                      {((technicalData?.data as any)?.volume?.current || 0).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -142,9 +142,9 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               ) : (
                 <div className="text-center mb-4">
                   <div className="text-3xl font-bold text-green-500 mb-2">
-                    {sentimentData?.data?.retail?.score || 0}%
+                    {(sentimentData?.data as any)?.retail?.score || 0}%
                   </div>
-                  <div className="text-slate-400">{sentimentData?.data?.retail?.sentiment || "Neutral"}</div>
+                  <div className="text-slate-400">{(sentimentData?.data as any)?.retail?.sentiment || "Neutral"}</div>
                   <div className="h-32 bg-slate-700 rounded-lg flex items-center justify-center mt-4">
                     <span className="text-slate-400">Sentiment Chart Placeholder</span>
                   </div>
@@ -167,9 +167,9 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               ) : (
                 <div className="text-center mb-4">
                   <div className="text-3xl font-bold text-blue-500 mb-2">
-                    {sentimentData?.data?.professional?.score || 0}%
+                    {(sentimentData?.data as any)?.professional?.score || 0}%
                   </div>
-                  <div className="text-slate-400">{sentimentData?.data?.professional?.sentiment || "Neutral"}</div>
+                  <div className="text-slate-400">{(sentimentData?.data as any)?.professional?.sentiment || "Neutral"}</div>
                   <div className="h-32 bg-slate-700 rounded-lg flex items-center justify-center mt-4">
                     <span className="text-slate-400">Pro Sentiment Chart Placeholder</span>
                   </div>
@@ -199,19 +199,19 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <div className="flex justify-between">
                     <span className="text-slate-400">P/E Ratio</span>
                     <span className="text-white font-medium">
-                      {fundamentalsData?.data?.keyMetrics?.peRatio || 'N/A'}
+                      {(fundamentalsData?.data as any)?.keyMetrics?.peRatio || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Market Cap</span>
                     <span className="text-white font-medium">
-                      ${fundamentalsData?.data?.keyMetrics?.marketCap || 'N/A'}
+                      ${(fundamentalsData?.data as any)?.keyMetrics?.marketCap || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Revenue (TTM)</span>
                     <span className="text-white font-medium">
-                      ${fundamentalsData?.data?.keyMetrics?.revenue || 'N/A'}
+                      ${(fundamentalsData?.data as any)?.keyMetrics?.revenue || 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -236,19 +236,19 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <div className="flex justify-between">
                     <span className="text-slate-400">Debt/Equity</span>
                     <span className="text-green-500 font-medium">
-                      {fundamentalsData?.data?.financialHealth?.debtToEquity || 'N/A'}
+                      {(fundamentalsData?.data as any)?.financialHealth?.debtToEquity || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Current Ratio</span>
                     <span className="text-green-500 font-medium">
-                      {fundamentalsData?.data?.financialHealth?.currentRatio || 'N/A'}
+                      {(fundamentalsData?.data as any)?.financialHealth?.currentRatio || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">ROE</span>
                     <span className="text-green-500 font-medium">
-                      {fundamentalsData?.data?.financialHealth?.roe || 'N/A'}%
+                      {(fundamentalsData?.data as any)?.financialHealth?.roe || 'N/A'}%
                     </span>
                   </div>
                 </div>
@@ -273,19 +273,19 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <div className="flex justify-between">
                     <span className="text-slate-400">Revenue Growth</span>
                     <span className="text-blue-500 font-medium">
-                      {fundamentalsData?.data?.growth?.revenueGrowth || 'N/A'}%
+                      {(fundamentalsData?.data as any)?.growth?.revenueGrowth || 'N/A'}%
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">EPS Growth</span>
                     <span className="text-green-500 font-medium">
-                      {fundamentalsData?.data?.growth?.epsGrowth || 'N/A'}%
+                      {(fundamentalsData?.data as any)?.growth?.epsGrowth || 'N/A'}%
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Book Value Growth</span>
                     <span className="text-blue-500 font-medium">
-                      {fundamentalsData?.data?.growth?.bookValueGrowth || 'N/A'}%
+                      {(fundamentalsData?.data as any)?.growth?.bookValueGrowth || 'N/A'}%
                     </span>
                   </div>
                 </div>
@@ -327,14 +327,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">RSI (14)</span>
                       <span className="text-yellow-500">
-                        {technicalData?.data?.indicators?.rsi || 'N/A'}
+                        {(technicalData?.data as any)?.indicators?.rsi || 'N/A'}
                       </span>
                     </div>
-                    {technicalData?.data?.indicators?.rsi && (
+                    {(technicalData?.data as any)?.indicators?.rsi && (
                       <div className="w-full bg-slate-700 rounded-full h-2">
                         <div
                           className="bg-yellow-500 h-2 rounded-full"
-                          style={{ width: `${Math.min(technicalData.data.indicators.rsi, 100)}%` }}
+                          style={{ width: `${Math.min((technicalData.data as any).indicators.rsi, 100)}%` }}
                         ></div>
                       </div>
                     )}
@@ -343,7 +343,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">MACD</span>
                       <span className="text-green-500">
-                        {technicalData?.data?.indicators?.macd || 'N/A'}
+                        {(technicalData?.data as any)?.indicators?.macd || 'N/A'}
                       </span>
                     </div>
                   </div>
@@ -351,7 +351,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">Moving Avg (20)</span>
                       <span className="text-green-500">
-                        {technicalData?.data?.indicators?.movingAvg20 || 'N/A'}
+                        {(technicalData?.data as any)?.indicators?.movingAvg20 || 'N/A'}
                       </span>
                     </div>
                   </div>
