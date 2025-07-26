@@ -28,33 +28,33 @@ function Router() {
     );
   }
 
+  if (!user) {
+    return (
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route path="/login" component={Login} />
+        <Route path="/pricing" component={PricingPage} />
+        <Route path="/how-to-use" component={HowToUsePage} />
+        <Route path="/about" component={AboutPage} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
-      {!user ? (
-        <>
-          <Route path="/" component={HomePage} />
-          <Route path="/login" component={Login} />
-          <Route path="/pricing" component={PricingPage} />
-          <Route path="/how-to-use" component={HowToUsePage} />
-          <Route path="/about" component={AboutPage} />
-          <Route component={NotFound} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/login">
-            {() => {
-              window.location.href = '/dashboard';
-              return null;
-            }}
-          </Route>
-          <Route path="/pricing" component={Dashboard} />
-          <Route path="/how-to-use" component={Dashboard} />
-          <Route path="/about" component={Dashboard} />
-          <Route component={Dashboard} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/login">
+        {() => {
+          window.location.href = '/dashboard';
+          return null;
+        }}
+      </Route>
+      <Route path="/pricing" component={Dashboard} />
+      <Route path="/how-to-use" component={Dashboard} />
+      <Route path="/about" component={Dashboard} />
+      <Route component={Dashboard} />
     </Switch>
   );
 }
