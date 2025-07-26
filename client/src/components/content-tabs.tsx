@@ -333,10 +333,10 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     <div className="flex justify-between mb-1">
                       <span className="text-slate-400">RSI (14)</span>
                       <span className="text-yellow-500">
-                        {(technicalData?.data as any)?.indicators?.rsi || 'N/A'}
+                        {technicalData?.data && (technicalData.data as any)?.indicators?.rsi || 'N/A'}
                       </span>
                     </div>
-                    {(technicalData?.data as any)?.indicators?.rsi && (
+                    {technicalData?.data && (technicalData.data as any)?.indicators?.rsi && (
                       <div className="w-full bg-slate-700 rounded-full h-2">
                         <div
                           className="bg-yellow-500 h-2 rounded-full"

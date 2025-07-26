@@ -50,20 +50,24 @@ export default function Login() {
   });
 
   const onLoginSubmit = async (data: LoginUser) => {
-    await loginMutation.mutateAsync(data);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 2000);
+    try {
+      await loginMutation.mutateAsync(data);
+      setShowSuccess(true);
+      // Redirect happens automatically via auth state change in App.tsx
+    } catch (error) {
+      console.error('Login error:', error);
+    }
   };
 
   const onRegisterSubmit = async (data: RegisterForm) => {
-    const { confirmPassword, ...registerData } = data;
-    await registerMutation.mutateAsync(registerData);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 2000);
+    try {
+      const { confirmPassword, ...registerData } = data;
+      await registerMutation.mutateAsync(registerData);
+      setShowSuccess(true);
+      // Redirect happens automatically via auth state change in App.tsx
+    } catch (error) {
+      console.error('Registration error:', error);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
@@ -88,15 +92,15 @@ export default function Login() {
             <div className="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center mb-4">
               <ChartLine className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Explain This Ticker</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Should I buy this stock</h1>
             <p className="text-slate-400">Financial intelligence at your fingertips</p>
           </div>
 
           {/* Success Message */}
           {showSuccess && (
             <div className="bg-green-900/50 border border-green-500 rounded-lg p-4 text-green-400 text-center">
-              <i className="fas fa-check-circle mr-2"></i>
-              {isRegistering ? "Account created" : "Login"} successful! Redirecting to dashboard...
+              <ChartLine className="h-5 w-5 inline mr-2" />
+              {isRegistering ? "Account created" : "Login"} successful! Redirecting...
             </div>
           )}
 
