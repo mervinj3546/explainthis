@@ -42,6 +42,8 @@ export interface IStorage {
   // Ticker data operations
   getTickerData(tickerSymbol: string, dataType: string): Promise<TickerData | undefined>;
   saveTickerData(tickerSymbol: string, dataType: string, data: any): Promise<TickerData>;
+  clearTickerData(tickerSymbol: string, dataType: string): Promise<boolean>;
+  isCacheExpired(tickerSymbol: string, dataType: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -92,29 +94,27 @@ export class MemStorage implements IStorage {
     };
     this.users.set(demoId, demoUser);
 
-    // Add some sample watchlist items for demo user
-    const watchlistItems = ["AAPL", "TSLA", "MSFT"];
-    for (const symbol of watchlistItems) {
-      const watchlistItem: UserWatchlist = {
-        id: randomUUID(),
-        userId: demoId,
-        tickerSymbol: symbol,
-        addedAt: new Date(),
-      };
-      this.watchlists.set(watchlistItem.id, watchlistItem);
-    }
+    // Do not add any sample watchlist items - let user add them organically
+    // Do not add any sample search history - let user build it through actual searches
+    
+    // Clear any existing hardcoded data for demo user (in case server has been restarted)
+    this.clearDemoUserData(demoId);
+  }
 
-    // Add some sample search history for demo user
-    const searchItems = ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN"];
-    for (let i = 0; i < searchItems.length; i++) {
-      const historyItem: UserSearchHistory = {
-        id: randomUUID(),
-        userId: demoId,
-        tickerSymbol: searchItems[i],
-        searchedAt: new Date(Date.now() - (i * 60 * 60 * 1000)), // Spread over hours
-      };
-      this.searchHistory.set(historyItem.id, historyItem);
-    }
+  private clearDemoUserData(demoUserId: string) {
+    // Remove all existing watchlist items for demo user
+    Array.from(this.watchlists.entries()).forEach(([id, item]) => {
+      if (item.userId === demoUserId) {
+        this.watchlists.delete(id);
+      }
+    });
+    
+    // Remove all existing search history for demo user
+    Array.from(this.searchHistory.entries()).forEach(([id, item]) => {
+      if (item.userId === demoUserId) {
+        this.searchHistory.delete(id);
+      }
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -237,6 +237,37 @@ export class MemStorage implements IStorage {
     };
     this.tickerDataStore.set(id, tickerDataItem);
     return tickerDataItem;
+  }
+
+  async clearTickerData(tickerSymbol: string, dataType: string): Promise<boolean> {
+    const existingData = Array.from(this.tickerDataStore.entries()).find(
+      ([_, data]) => data.tickerSymbol === tickerSymbol.toUpperCase() && data.dataType === dataType
+    );
+    if (existingData) {
+      this.tickerDataStore.delete(existingData[0]);
+      return true;
+    }
+    return false;
+  }
+
+  async isCacheExpired(tickerSymbol: string, dataType: string): Promise<boolean> {
+    const data = await this.getTickerData(tickerSymbol, dataType);
+    if (!data || !data.createdAt) return true;
+
+    const now = new Date();
+    const cacheAge = now.getTime() - data.createdAt.getTime();
+    
+    // Cache expiry rules based on data type
+    switch (dataType) {
+      case 'fundamentals':
+        return cacheAge > 24 * 60 * 60 * 1000; // 24 hours for fundamentals
+      case 'news':
+        return cacheAge > 30 * 60 * 1000; // 30 minutes for news
+      case 'technical':
+        return cacheAge > 5 * 60 * 1000; // 5 minutes for technical indicators
+      default:
+        return cacheAge > 60 * 60 * 1000; // 1 hour default
+    }
   }
 }
 
@@ -490,6 +521,38 @@ export class DbStorage implements IStorage {
       })
       .returning();
     return tickerDataItem;
+  }
+
+  async clearTickerData(tickerSymbol: string, dataType: string): Promise<boolean> {
+    const result = await db
+      .delete(tickerData)
+      .where(
+        and(
+          eq(tickerData.tickerSymbol, tickerSymbol.toUpperCase()),
+          eq(tickerData.dataType, dataType)
+        )
+      );
+    return true;
+  }
+
+  async isCacheExpired(tickerSymbol: string, dataType: string): Promise<boolean> {
+    const data = await this.getTickerData(tickerSymbol, dataType);
+    if (!data || !data.createdAt) return true;
+
+    const now = new Date();
+    const cacheAge = now.getTime() - data.createdAt.getTime();
+    
+    // Cache expiry rules based on data type
+    switch (dataType) {
+      case 'fundamentals':
+        return cacheAge > 24 * 60 * 60 * 1000; // 24 hours for fundamentals
+      case 'news':
+        return cacheAge > 30 * 60 * 1000; // 30 minutes for news
+      case 'technical':
+        return cacheAge > 5 * 60 * 1000; // 5 minutes for technical indicators
+      default:
+        return cacheAge > 60 * 60 * 1000; // 1 hour default
+    }
   }
 }
 

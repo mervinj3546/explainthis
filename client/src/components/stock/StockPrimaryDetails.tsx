@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, TrendingDown, DollarSign, Calendar, BarChart3 } from "lucide-react";
 import { useStockData, type StockData } from "@/hooks/use-stock-data";
+import TradingViewWidget from "@/components/TradingViewWidget";
 
 interface StockPrimaryDetailsProps {
   tickerSymbol: string;
@@ -148,6 +149,16 @@ export function StockPrimaryDetails({ tickerSymbol }: StockPrimaryDetailsProps) 
           </CardContent>
         </Card>
       </div>
+
+      {/* TradingView Chart */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Price Chart</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TradingViewWidget symbol={tickerSymbol} />
+        </CardContent>
+      </Card>
 
       {/* Year Range */}
       <Card className="bg-slate-800 border-slate-700">

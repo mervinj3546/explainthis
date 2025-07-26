@@ -6,6 +6,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import passport from "./auth";
 import { getBasicStockData } from "./stockData";
+import { getTechnicalIndicators } from "./technicalAnalysis";
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -137,6 +138,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tickers/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
+      
+      // Try to get real-time stock data from Finnhub API (same as getBasicStockData)
+      const finnhubToken = process.env.FINNHUB_API_KEY;
+      
+      if (finnhubToken) {
+        try {
+          const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubToken}`;
+          const quoteRes = await fetch(quoteUrl);
+          
+          if (quoteRes.ok && quoteRes.status !== 429) {
+            const quoteData = await quoteRes.json();
+            
+            if (quoteData && quoteData.c !== 0) {
+              const priceChange = quoteData.c - quoteData.pc;
+              const priceChangePercent = (priceChange / quoteData.pc) * 100;
+              
+              const realTimeData = {
+                id: symbol,
+                symbol: symbol,
+                name: `${symbol} Inc.`, // Fallback name - could be enhanced with company name API
+                price: quoteData.c, // Current price
+                change: priceChange,
+                changePercent: priceChangePercent,
+                volume: 0, // Would need additional API call for volume
+                marketCap: 0, // Would need additional API call for market cap
+                createdAt: new Date(),
+                updatedAt: new Date()
+              };
+              
+              return res.json(realTimeData);
+            }
+          }
+        } catch (apiError) {
+          console.log(`Failed to fetch real-time data for ${symbol} from Finnhub:`, apiError);
+        }
+      }
+      
+      // Fallback to stored ticker data if API call fails
       const ticker = await storage.getTicker(symbol);
       
       if (!ticker) {
@@ -151,6 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stock market data routes (using external APIs)
   app.get("/api/stock/basic", getBasicStockData);
+  app.get("/api/stock/technical", getTechnicalIndicators);
 
   // Watchlist routes
   app.get("/api/watchlist", requireAuth, async (req: any, res) => {
@@ -283,57 +323,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ticker-data/:symbol/:type", async (req, res) => {
     try {
       const { symbol, type } = req.params;
-      let data = await storage.getTickerData(symbol, type);
+      const { refresh } = req.query;
       
-      // If no data exists, create mock data based on type
-      if (!data) {
-        let mockData;
+      console.log(`Request for ${symbol}/${type}, refresh=${refresh}`);
+      
+      // Check if we should use cached data or fetch fresh data
+      let shouldFetchFresh = refresh === 'true';
+      
+      if (!shouldFetchFresh) {
+        // Check if cache is expired
+        const isExpired = await storage.isCacheExpired(symbol, type);
+        shouldFetchFresh = isExpired;
+        console.log(`Cache expired for ${symbol}/${type}: ${isExpired}`);
+      }
+      
+      // Get existing cached data (shared across all users for fundamentals)
+      let data = await storage.getTickerData(symbol, type);
+      console.log(`Cached data exists for ${symbol}/${type}: ${!!data}${data && data.createdAt ? ` (cached ${Math.round((Date.now() - data.createdAt.getTime()) / (1000 * 60))} minutes ago)` : ''}`);
+      
+      // If we need fresh data or no data exists, fetch from APIs
+      if (shouldFetchFresh || !data) {
+        console.log(`Fetching fresh data for ${symbol}/${type} (expired: ${shouldFetchFresh}, missing: ${!data})`);
+        let apiData;
+        const finnhubToken = process.env.FINNHUB_API_KEY;
+        
         switch (type) {
-          case 'news':
-            mockData = {
-              items: [
-                {
-                  title: `${symbol} Reports Strong Quarterly Results`,
-                  summary: "Company exceeds analyst expectations with robust revenue growth...",
-                  time: "2 hours ago",
-                  sentiment: "positive"
-                },
-                {
-                  title: `Market Analysis: ${symbol} Price Target Raised`,
-                  summary: "Multiple analysts upgrade their price targets following recent developments...",
-                  time: "4 hours ago",
-                  sentiment: "positive"
+          case 'fundamentals':
+            if (finnhubToken) {
+              try {
+                console.log(`Fetching fresh fundamentals data for ${symbol} from Finnhub...`);
+                
+                // Fetch company basic financials from Finnhub
+                const metricsUrl = `https://finnhub.io/api/v1/stock/metric?symbol=${symbol}&metric=all&token=${finnhubToken}`;
+                const metricsRes = await fetch(metricsUrl);
+                
+                if (metricsRes.ok) {
+                  const metricsData = await metricsRes.json();
+                  const metrics = metricsData.metric;
+                  
+                  console.log(`Finnhub metrics response for ${symbol}:`, metrics);
+                  
+                  if (metrics) {
+                    console.log('Debug AAPL metrics extract:', {
+                      revenuePerShareTTM: metrics.revenuePerShareTTM,
+                      currentRatioQuarterly: metrics.currentRatioQuarterly,
+                      totalDebtToEquityQuarterly: metrics['totalDebt/totalEquityQuarterly'],
+                      bookValueShareGrowth5Y: metrics.bookValueShareGrowth5Y
+                    });
+                    
+                    apiData = {
+                      keyMetrics: {
+                        peRatio: metrics.peBasicExclExtraTTM || metrics.peTTM || 0,
+                        marketCap: metrics.marketCapitalization ? `${(metrics.marketCapitalization / 1000).toFixed(1)}B` : "N/A",
+                        revenue: metrics.revenuePerShareTTM ? `${(metrics.revenuePerShareTTM * 15.2).toFixed(1)}B` : "N/A" // Approximate shares outstanding
+                      },
+                      financialHealth: {
+                        debtToEquity: metrics['totalDebt/totalEquityQuarterly'] || metrics['totalDebt/totalEquityAnnual'] || 0,
+                        currentRatio: metrics.currentRatioQuarterly || metrics.currentRatioAnnual || 0,
+                        roe: metrics.roeTTM || metrics.roeRfy || 0
+                      },
+                      growth: {
+                        revenueGrowth: metrics.revenueGrowthTTMYoy || metrics.revenueGrowthQuarterlyYoy || 0,
+                        epsGrowth: metrics.epsGrowthTTMYoy || metrics.epsGrowthQuarterlyYoy || 0,
+                        bookValueGrowth: metrics.bookValueShareGrowth5Y || 0
+                      }
+                    };
+                  }
                 }
-              ]
-            };
+              } catch (apiError) {
+                console.log(`Failed to fetch fundamentals for ${symbol} from Finnhub:`, apiError);
+              }
+            }
+            
+            // Fallback to mock data if API fails
+            if (!apiData) {
+              apiData = {
+                keyMetrics: {
+                  peRatio: 28.5,
+                  marketCap: "2.45T",
+                  revenue: "394.3B"
+                },
+                financialHealth: {
+                  debtToEquity: 0.31,
+                  currentRatio: 1.07,
+                  roe: 175.4
+                },
+                growth: {
+                  revenueGrowth: 8.1,
+                  epsGrowth: 11.2,
+                  bookValueGrowth: 5.7
+                }
+              };
+            }
             break;
+            
+          case 'news':
+            if (finnhubToken) {
+              try {
+                // Fetch real news from Finnhub
+                const toDate = new Date();
+                const fromDate = new Date();
+                fromDate.setDate(toDate.getDate() - 7);
+                
+                const from = fromDate.toISOString().split('T')[0];
+                const to = toDate.toISOString().split('T')[0];
+                
+                const newsUrl = `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${finnhubToken}`;
+                const newsRes = await fetch(newsUrl);
+                
+                if (newsRes.ok) {
+                  const newsData = await newsRes.json();
+                  
+                  if (Array.isArray(newsData) && newsData.length > 0) {
+                    apiData = {
+                      items: newsData.slice(0, 5).map((item: any) => ({
+                        title: item.headline || 'No headline',
+                        summary: item.summary || 'No summary available',
+                        time: new Date(item.datetime * 1000).toLocaleString(),
+                        sentiment: item.sentiment > 0 ? "positive" : item.sentiment < 0 ? "negative" : "neutral"
+                      }))
+                    };
+                  }
+                }
+              } catch (apiError) {
+                console.log(`Failed to fetch news for ${symbol} from Finnhub:`, apiError);
+              }
+            }
+            
+            // Fallback to mock data if API fails
+            if (!apiData) {
+              apiData = {
+                items: [
+                  {
+                    title: `${symbol} Reports Strong Quarterly Results`,
+                    summary: "Company exceeds analyst expectations with robust revenue growth...",
+                    time: "2 hours ago",
+                    sentiment: "positive"
+                  },
+                  {
+                    title: `Market Analysis: ${symbol} Price Target Raised`,
+                    summary: "Multiple analysts upgrade their price targets following recent developments...",
+                    time: "4 hours ago",
+                    sentiment: "positive"
+                  }
+                ]
+              };
+            }
+            break;
+            
           case 'sentiment':
-            mockData = {
+            apiData = {
               retail: { score: 78, sentiment: "Bullish" },
               professional: { score: 65, sentiment: "Neutral-Bullish" }
             };
             break;
-          case 'fundamentals':
-            mockData = {
-              keyMetrics: {
-                peRatio: 28.5,
-                marketCap: "2.45T",
-                revenue: "394.3B"
-              },
-              financialHealth: {
-                debtToEquity: 0.31,
-                currentRatio: 1.07,
-                roe: 175.4
-              },
-              growth: {
-                revenueGrowth: 8.1,
-                epsGrowth: 11.2,
-                bookValueGrowth: 5.7
-              }
-            };
-            break;
+            
           case 'technical':
-            mockData = {
+            apiData = {
               indicators: {
                 rsi: 67.3,
                 macd: "Bullish",
@@ -346,11 +492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             };
             break;
+            
           default:
             return res.status(404).json({ message: "Data type not found" });
         }
         
-        data = await storage.saveTickerData(symbol, type, mockData);
+        data = await storage.saveTickerData(symbol, type, apiData);
       }
       
       res.json(data);
