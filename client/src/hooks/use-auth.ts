@@ -12,6 +12,7 @@ export function useAuth() {
     queryKey: ["/api/auth/me"],
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true, // Ensure auth state is fresh when window is focused
   });
 
   return {
