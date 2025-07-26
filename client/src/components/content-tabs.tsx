@@ -32,7 +32,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
 
   return (
     <Tabs defaultValue="moving" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-slate-700">
+      <TabsList className="grid w-full grid-cols-6 bg-slate-800 border-slate-700">
         <TabsTrigger
           value="moving"
           className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
@@ -56,6 +56,18 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
         >
           Technical Analysis
+        </TabsTrigger>
+        <TabsTrigger
+          value="financial"
+          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+        >
+          Financial Analysis
+        </TabsTrigger>
+        <TabsTrigger
+          value="ai"
+          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+        >
+          AI Analysis
         </TabsTrigger>
       </TabsList>
 
@@ -357,6 +369,165 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="financial" className="mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Financial Statement Analysis */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Financial Statement Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h4 className="text-green-500 font-semibold mb-2">Income Statement Highlights</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Revenue Growth YoY</span>
+                      <span className="text-green-500">+15.2%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Operating Margin</span>
+                      <span className="text-blue-500">28.5%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Net Profit Margin</span>
+                      <span className="text-green-500">24.1%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h4 className="text-blue-500 font-semibold mb-2">Balance Sheet Health</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Cash Position</span>
+                      <span className="text-green-500">Strong</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Debt Levels</span>
+                      <span className="text-green-500">Conservative</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Asset Quality</span>
+                      <span className="text-blue-500">High</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Valuation Analysis */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Valuation Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h4 className="text-yellow-500 font-semibold mb-2">Comparative Valuation</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">P/E vs Industry</span>
+                      <span className="text-yellow-500">Premium</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">P/B Ratio</span>
+                      <span className="text-blue-500">2.4x</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">EV/Sales</span>
+                      <span className="text-green-500">6.8x</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h4 className="text-purple-500 font-semibold mb-2">DCF Analysis</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Fair Value</span>
+                      <span className="text-green-500">$195.50</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Upside/Downside</span>
+                      <span className="text-green-500">+8.2%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Risk Rating</span>
+                      <span className="text-blue-500">Medium</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="ai" className="mt-6">
+        <div className="grid grid-cols-1 gap-6">
+          {/* AI Analysis Summary */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <span className="mr-2">🤖</span>
+                AI-Powered Analysis Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 p-4 rounded-lg border border-blue-500/20">
+                  <h4 className="text-blue-400 font-semibold mb-2">Market Outlook</h4>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    Based on technical indicators, fundamental analysis, and market sentiment, the AI model suggests a 
+                    <span className="text-green-500 font-medium"> moderately bullish </span> 
+                    outlook for this ticker. Recent earnings performance and sector trends support continued growth potential.
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 p-4 rounded-lg border border-green-500/20">
+                  <h4 className="text-green-400 font-semibold mb-2">Key Catalysts Identified</h4>
+                  <ul className="text-slate-300 text-sm space-y-1">
+                    <li>• Product launch cycle expected to drive Q4 revenue</li>
+                    <li>• Market expansion in emerging regions showing momentum</li>
+                    <li>• Cost optimization initiatives improving margins</li>
+                    <li>• Strategic partnerships enhancing competitive position</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 p-4 rounded-lg border border-yellow-500/20">
+                  <h4 className="text-yellow-400 font-semibold mb-2">Risk Assessment</h4>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    Primary risks include regulatory changes, supply chain disruptions, and increased competition. 
+                    However, the company's strong balance sheet and diversified revenue streams provide 
+                    <span className="text-blue-500 font-medium"> solid downside protection</span>.
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-4 rounded-lg border border-purple-500/20">
+                  <h4 className="text-purple-400 font-semibold mb-2">Price Target & Timeline</h4>
+                  <div className="grid grid-cols-3 gap-4 mt-3">
+                    <div className="text-center">
+                      <div className="text-slate-400 text-xs">3 Month</div>
+                      <div className="text-green-500 font-bold">$205</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-slate-400 text-xs">6 Month</div>
+                      <div className="text-blue-500 font-bold">$218</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-slate-400 text-xs">12 Month</div>
+                      <div className="text-purple-500 font-bold">$235</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

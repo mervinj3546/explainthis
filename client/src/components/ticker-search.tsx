@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import type { Ticker } from "@shared/schema";
 
+interface SearchHistoryItem {
+  id: string;
+  tickerSymbol: string;
+  ticker?: Ticker;
+}
+
 interface TickerSearchProps {
   onTickerSelect: (symbol: string) => void;
   currentTicker?: string;
@@ -14,11 +20,16 @@ interface TickerSearchProps {
 export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: searchResults = [], isLoading } = useQuery<Ticker[]>({
     queryKey: ["/api/tickers/search", searchQuery],
     enabled: searchQuery.length > 0,
+  });
+
+  const { data: searchHistory = [] } = useQuery<SearchHistoryItem[]>({
+    queryKey: ["/api/search-history"],
   });
 
   const addToSearchHistoryMutation = useMutation({
@@ -33,6 +44,7 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
   const handleTickerSelect = (symbol: string) => {
     setSearchQuery(symbol);
     setShowResults(false);
+    setShowHistory(false);
     onTickerSelect(symbol);
     addToSearchHistoryMutation.mutate(symbol);
   };
@@ -59,13 +71,23 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
-            setShowResults(true);
+            setShowResults(e.target.value.length > 0);
+            setShowHistory(false);
           }}
           onBlur={() => {
             // Delay hiding results to allow for clicking
-            setTimeout(() => setShowResults(false), 150);
+            setTimeout(() => {
+              setShowResults(false);
+              setShowHistory(false);
+            }, 150);
           }}
-          onFocus={() => setShowResults(true)}
+          onFocus={() => {
+            if (searchQuery.length > 0) {
+              setShowResults(true);
+            } else {
+              setShowHistory(true);
+            }
+          }}
           className="w-64 pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
         />
         <Button
@@ -108,6 +130,47 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
                 </div>
               </button>
             ))
+          )}
+        </div>
+      )}
+
+      {/* Previously Searched Dropdown */}
+      {showHistory && searchQuery.length === 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+          {searchHistory.length === 0 ? (
+            <div className="p-3 text-slate-400 text-sm">No recent searches</div>
+          ) : (
+            <>
+              <div className="p-2 border-b border-slate-700">
+                <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">Previously Searched</div>
+              </div>
+              {searchHistory.slice(0, 5).map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
+                  onClick={() => handleTickerSelect(item.tickerSymbol)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-medium text-white">{item.tickerSymbol}</div>
+                      {item.ticker && (
+                        <div className="text-sm text-slate-400 truncate">{item.ticker.name}</div>
+                      )}
+                    </div>
+                    {item.ticker && (
+                      <div className="text-right">
+                        <div className="text-sm text-white">
+                          ${item.ticker.price.toFixed(2)}
+                        </div>
+                        <div className={`text-xs ${item.ticker.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {item.ticker.change >= 0 ? '+' : ''}{item.ticker.changePercent.toFixed(2)}%
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </>
           )}
         </div>
       )}

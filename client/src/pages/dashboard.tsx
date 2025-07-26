@@ -54,12 +54,8 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-white">Explain This Ticker</h1>
           </div>
 
-          {/* Search and Profile */}
+          {/* User Profile */}
           <div className="flex items-center space-x-4">
-            {/* Search Bar */}
-            <TickerSearch onTickerSelect={handleTickerSelect} currentTicker={currentTicker} />
-
-            {/* User Profile */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
@@ -86,6 +82,13 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Centered Search Bar */}
+      <div className="bg-slate-800 border-b border-slate-700 py-4">
+        <div className="max-w-md mx-auto px-4">
+          <TickerSearch onTickerSelect={handleTickerSelect} currentTicker={currentTicker} />
+        </div>
+      </div>
 
       {/* Main Layout */}
       <div className="flex">
