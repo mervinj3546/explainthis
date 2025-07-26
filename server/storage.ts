@@ -56,8 +56,9 @@ export class MemStorage implements IStorage {
     this.searchHistory = new Map();
     this.tickerDataStore = new Map();
     
-    // Seed with some sample tickers
+    // Seed with some sample tickers and demo user
     this.seedTickers();
+    this.seedDemoUser();
   }
 
   private async seedTickers() {
@@ -71,6 +72,45 @@ export class MemStorage implements IStorage {
 
     for (const ticker of sampleTickers) {
       await this.createOrUpdateTicker(ticker);
+    }
+  }
+
+  private async seedDemoUser() {
+    // Create demo user: demo@example.com / demo123
+    const demoId = "demo-user-id";
+    const hashedPassword = await bcrypt.hash("demo123", 10);
+    const demoUser: User = {
+      id: demoId,
+      email: "demo@example.com",
+      password: hashedPassword,
+      firstName: "Demo",
+      lastName: "User",
+      createdAt: new Date(),
+    };
+    this.users.set(demoId, demoUser);
+
+    // Add some sample watchlist items for demo user
+    const watchlistItems = ["AAPL", "TSLA", "MSFT"];
+    for (const symbol of watchlistItems) {
+      const watchlistItem: UserWatchlist = {
+        id: randomUUID(),
+        userId: demoId,
+        tickerSymbol: symbol,
+        addedAt: new Date(),
+      };
+      this.watchlists.set(watchlistItem.id, watchlistItem);
+    }
+
+    // Add some sample search history for demo user
+    const searchItems = ["AAPL", "TSLA", "MSFT", "NVDA", "AMZN"];
+    for (let i = 0; i < searchItems.length; i++) {
+      const historyItem: UserSearchHistory = {
+        id: randomUUID(),
+        userId: demoId,
+        tickerSymbol: searchItems[i],
+        searchedAt: new Date(Date.now() - (i * 60 * 60 * 1000)), // Spread over hours
+      };
+      this.searchHistory.set(historyItem.id, historyItem);
     }
   }
 
