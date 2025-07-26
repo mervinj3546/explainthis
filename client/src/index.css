@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(217, 33%, 17%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(142, 76%, 36%);
+  --radius: 0.5rem;
+  
+  /* Custom colors for the financial app */
+  --bullish: hsl(142, 76%, 36%);
+  --bullish-hover: hsl(142, 76%, 30%);
+  --bearish: hsl(0, 84%, 60%);
+  --neutral: hsl(221, 83%, 53%);
+  --neutral-hover: hsl(221, 83%, 45%);
+  --slate-850: hsl(217, 33%, 17%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(217, 33%, 17%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(142, 76%, 36%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(142, 76%, 36%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-bounce-subtle {
+    animation: bounce-subtle 0.3s ease-in-out;
+  }
+}
+
+@keyframes gradient {
+  0%, 100% {
+    background-position: left center;
+  }
+  50% {
+    background-position: right center;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(142, 76%, 36%, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px hsl(142, 76%, 36%, 0.5);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+}
+
+.bg-slate-850 {
+  background-color: var(--slate-850);
+}
+
+.text-bullish {
+  color: var(--bullish);
+}
+
+.text-bearish {
+  color: var(--bearish);
+}
+
+.bg-bullish {
+  background-color: var(--bullish);
+}
+
+.bg-bearish {
+  background-color: var(--bearish);
+}
+
+.hover\:bg-bullish-hover:hover {
+  background-color: var(--bullish-hover);
+}
+
+.border-bullish {
+  border-color: var(--bullish);
+}
