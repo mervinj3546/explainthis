@@ -53,7 +53,10 @@ export default function Login() {
     try {
       await loginMutation.mutateAsync(data);
       setShowSuccess(true);
-      // Redirect happens automatically via auth state change in App.tsx
+      // Small delay to show success message, then redirect happens automatically
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
     } catch (error) {
       console.error('Login error:', error);
     }
@@ -64,7 +67,10 @@ export default function Login() {
       const { confirmPassword, ...registerData } = data;
       await registerMutation.mutateAsync(registerData);
       setShowSuccess(true);
-      // Redirect happens automatically via auth state change in App.tsx
+      // Small delay to show success message, then redirect happens automatically
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
     } catch (error) {
       console.error('Registration error:', error);
     }
