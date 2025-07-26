@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, LoginUser, InsertUser } from "@shared/schema";
@@ -100,6 +101,7 @@ export function useRegister() {
 export function useLogout() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   return useMutation({
     mutationFn: async (): Promise<void> => {
@@ -112,10 +114,8 @@ export function useLogout() {
         title: "Success",
         description: "Logged out successfully!",
       });
-      // Redirect to home page after successful logout
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+      // Use router navigation instead of hard redirect
+      setLocation('/');
     },
     onError: (error: Error) => {
       toast({

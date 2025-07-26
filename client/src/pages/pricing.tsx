@@ -6,46 +6,45 @@ import { ChartLine, Check } from "lucide-react";
 export default function PricingPage() {
   const plans = [
     {
-      name: "Basic",
-      price: "$5.99",
+      name: "Free",
+      price: "$0",
       period: "/month",
       features: [
-        "Up to 50 stock analyses per month",
-        "Basic financial metrics",
-        "Technical analysis indicators",
+        "10 stock lookups per month",
+        "Basic stock analysis",
+        "Essential metrics",
         "Email support",
-        "Mobile app access"
+        "Mobile access"
       ],
       popular: false
     },
     {
-      name: "Pro",
-      price: "$9.99",
+      name: "Starter",
+      price: "$5.99",
       period: "/month",
       features: [
-        "Unlimited stock analyses",
-        "AI-powered insights & recommendations",
-        "Advanced risk assessment",
-        "Retail vs Pro sentiment analysis",
+        "30 stock lookups per month",
+        "Advanced analysis features",
+        "Technical indicators",
         "Priority email support",
-        "Advanced charting tools",
-        "Portfolio tracking"
+        "Historical data access",
+        "Mobile app access"
       ],
       popular: true
     },
     {
-      name: "Enterprise",
-      price: "$15.99",
+      name: "Premium",
+      price: "$9.99",
       period: "/month",
       features: [
-        "Everything in Pro",
-        "Custom market alerts",
-        "API access for integrations",
-        "Advanced portfolio analytics",
-        "White-label options",
-        "Dedicated account manager",
-        "Custom reporting tools",
-        "Priority phone support"
+        "60 stock lookups per month",
+        "AI-powered insights & recommendations",
+        "Advanced risk assessment",
+        "Real-time alerts",
+        "Portfolio tracking",
+        "Advanced charting tools",
+        "Priority support",
+        "Export capabilities"
       ],
       popular: false
     }

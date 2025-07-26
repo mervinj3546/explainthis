@@ -15,6 +15,8 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
+import { db } from "./db";
+import { eq, and, desc, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -62,10 +64,11 @@ export class MemStorage implements IStorage {
   }
 
   private async seedTickers() {
+    // Update with more recent realistic stock prices (these are fallback values only)
     const sampleTickers = [
-      { symbol: "AAPL", name: "Apple Inc.", price: 150.23, change: 3.45, changePercent: 2.34, volume: 75000000, marketCap: 2450000000000 },
+      { symbol: "AAPL", name: "Apple Inc.", price: 213.88, change: 0.12, changePercent: 0.06, volume: 75000000, marketCap: 2450000000000 },
       { symbol: "TSLA", name: "Tesla, Inc.", price: 245.67, change: -3.56, changePercent: -1.45, volume: 45000000, marketCap: 780000000000 },
-      { symbol: "MSFT", name: "Microsoft Corporation", price: 334.12, change: 2.97, changePercent: 0.89, volume: 35000000, marketCap: 2800000000000 },
+      { symbol: "MSFT", name: "Microsoft Corporation", price: 513.71, change: 2.83, changePercent: 0.55, volume: 35000000, marketCap: 2800000000000 },
       { symbol: "NVDA", name: "NVIDIA Corporation", price: 418.77, change: 13.44, changePercent: 3.21, volume: 55000000, marketCap: 1030000000000 },
       { symbol: "AMZN", name: "Amazon.com, Inc.", price: 127.45, change: 0.57, changePercent: 0.45, volume: 28000000, marketCap: 1320000000000 },
     ];
@@ -237,4 +240,257 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DbStorage implements IStorage {
+  constructor() {
+    // Initialize with demo data
+    this.seedDatabase();
+  }
+
+  private async seedDatabase() {
+    try {
+      // Check if demo user already exists
+      const existingDemo = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, "demo@example.com"))
+        .limit(1);
+
+      if (existingDemo.length === 0) {
+        // Create demo user
+        const hashedPassword = await bcrypt.hash("demo123", 10);
+        const [demoUser] = await db
+          .insert(users)
+          .values({
+            id: "demo-user-id",
+            email: "demo@example.com",
+            password: hashedPassword,
+            firstName: "Demo",
+            lastName: "User",
+          })
+          .returning();
+
+        // Seed sample tickers
+        const sampleTickers = [
+          { symbol: "AAPL", name: "Apple Inc.", price: 213.88, change: 0.12, changePercent: 0.06, volume: 75000000, marketCap: 2450000000000 },
+          { symbol: "TSLA", name: "Tesla, Inc.", price: 245.67, change: -3.56, changePercent: -1.45, volume: 45000000, marketCap: 780000000000 },
+          { symbol: "MSFT", name: "Microsoft Corporation", price: 513.71, change: 2.83, changePercent: 0.55, volume: 35000000, marketCap: 2800000000000 },
+          { symbol: "NVDA", name: "NVIDIA Corporation", price: 418.77, change: 13.44, changePercent: 3.21, volume: 55000000, marketCap: 1030000000000 },
+          { symbol: "AMZN", name: "Amazon.com, Inc.", price: 127.45, change: 0.57, changePercent: 0.45, volume: 28000000, marketCap: 1320000000000 },
+        ];
+
+        for (const ticker of sampleTickers) {
+          await this.createOrUpdateTicker(ticker);
+        }
+
+        // Add sample watchlist for demo user
+        const watchlistItems = ["AAPL", "TSLA", "MSFT"];
+        for (const symbol of watchlistItems) {
+          await db.insert(userWatchlists).values({
+            userId: demoUser.id,
+            tickerSymbol: symbol,
+          });
+        }
+
+        // Add sample search history
+        const searchItems = ["AAPL", "TSLA", "MSFT", "NVDA"];
+        for (const symbol of searchItems) {
+          await db.insert(userSearchHistory).values({
+            userId: demoUser.id,
+            tickerSymbol: symbol,
+          });
+        }
+
+        // Add sample ticker data
+        const sampleData = {
+          news: {
+            headlines: [
+              { title: "Apple Reports Strong Q4 Earnings", source: "Reuters", time: "2 hours ago" },
+              { title: "New iPhone Sales Exceed Expectations", source: "Bloomberg", time: "4 hours ago" },
+              { title: "Apple Stock Reaches New High", source: "CNBC", time: "6 hours ago" }
+            ]
+          },
+          sentiment: {
+            bullish: 65,
+            bearish: 35,
+            neutral: 45,
+            sentiment_score: 0.75
+          },
+          fundamentals: {
+            pe_ratio: 28.5,
+            market_cap: 2450000000000,
+            revenue: 394000000000,
+            profit_margin: 0.25
+          },
+          technical: {
+            sma_20: 145.67,
+            sma_50: 142.34,
+            rsi: 58.3,
+            macd: 2.45
+          }
+        };
+
+        for (const dataType of ['news', 'sentiment', 'fundamentals', 'technical']) {
+          await db.insert(tickerData).values({
+            tickerSymbol: 'AAPL',
+            dataType,
+            data: sampleData[dataType as keyof typeof sampleData],
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error seeding database:', error);
+    }
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        ...user,
+        password: hashedPassword,
+      })
+      .returning();
+    return newUser;
+  }
+
+  async validateUser(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user) return null;
+
+    const isValid = await bcrypt.compare(password, user.password);
+    return isValid ? user : null;
+  }
+
+  async getTicker(symbol: string): Promise<Ticker | undefined> {
+    const result = await db
+      .select()
+      .from(tickers)
+      .where(eq(tickers.symbol, symbol.toUpperCase()))
+      .limit(1);
+    return result[0];
+  }
+
+  async searchTickers(query: string): Promise<Ticker[]> {
+    return await db
+      .select()
+      .from(tickers)
+      .where(ilike(tickers.symbol, `%${query.toUpperCase()}%`))
+      .limit(10);
+  }
+
+  async createOrUpdateTicker(ticker: InsertTicker): Promise<Ticker> {
+    const existing = await this.getTicker(ticker.symbol);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(tickers)
+        .set({ ...ticker, updatedAt: new Date() })
+        .where(eq(tickers.symbol, ticker.symbol))
+        .returning();
+      return updated;
+    } else {
+      const [newTicker] = await db
+        .insert(tickers)
+        .values(ticker)
+        .returning();
+      return newTicker;
+    }
+  }
+
+  async getUserWatchlist(userId: string): Promise<UserWatchlist[]> {
+    return await db
+      .select()
+      .from(userWatchlists)
+      .where(eq(userWatchlists.userId, userId));
+  }
+
+  async addToWatchlist(userId: string, tickerSymbol: string): Promise<UserWatchlist> {
+    const [watchlistItem] = await db
+      .insert(userWatchlists)
+      .values({
+        userId,
+        tickerSymbol: tickerSymbol.toUpperCase(),
+      })
+      .returning();
+    return watchlistItem;
+  }
+
+  async removeFromWatchlist(userId: string, tickerSymbol: string): Promise<boolean> {
+    const result = await db
+      .delete(userWatchlists)
+      .where(
+        and(
+          eq(userWatchlists.userId, userId),
+          eq(userWatchlists.tickerSymbol, tickerSymbol.toUpperCase())
+        )
+      );
+    return true;
+  }
+
+  async getUserSearchHistory(userId: string): Promise<UserSearchHistory[]> {
+    return await db
+      .select()
+      .from(userSearchHistory)
+      .where(eq(userSearchHistory.userId, userId))
+      .orderBy(desc(userSearchHistory.searchedAt))
+      .limit(10);
+  }
+
+  async addToSearchHistory(userId: string, tickerSymbol: string): Promise<UserSearchHistory> {
+    const [historyItem] = await db
+      .insert(userSearchHistory)
+      .values({
+        userId,
+        tickerSymbol: tickerSymbol.toUpperCase(),
+      })
+      .returning();
+    return historyItem;
+  }
+
+  async getTickerData(tickerSymbol: string, dataType: string): Promise<TickerData | undefined> {
+    const result = await db
+      .select()
+      .from(tickerData)
+      .where(
+        and(
+          eq(tickerData.tickerSymbol, tickerSymbol.toUpperCase()),
+          eq(tickerData.dataType, dataType)
+        )
+      )
+      .limit(1);
+    return result[0];
+  }
+
+  async saveTickerData(tickerSymbol: string, dataType: string, data: any): Promise<TickerData> {
+    const [tickerDataItem] = await db
+      .insert(tickerData)
+      .values({
+        tickerSymbol: tickerSymbol.toUpperCase(),
+        dataType,
+        data,
+      })
+      .returning();
+    return tickerDataItem;
+  }
+}
+
+export const storage = new DbStorage();

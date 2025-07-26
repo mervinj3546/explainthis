@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TickerData } from "@shared/schema";
+import { StockPrimaryDetails } from "@/components/stock/StockPrimaryDetails";
 
 interface ContentTabsProps {
   tickerSymbol: string;
@@ -66,70 +67,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
       </TabsList>
 
       <TabsContent value="primary" className="mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* News & Events Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white">Latest News & Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {newsLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-4 w-full bg-slate-700" />
-                  <Skeleton className="h-4 w-3/4 bg-slate-700" />
-                  <Skeleton className="h-4 w-1/2 bg-slate-700" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(newsData?.data as any)?.items?.map((item: any, index: number) => (
-                    <div key={index} className="border-l-4 border-green-500 pl-4">
-                      <h4 className="font-medium text-white mb-1">{item.title}</h4>
-                      <p className="text-slate-400 text-sm mb-2">{item.summary}</p>
-                      <span className="text-xs text-slate-500">{item.time}</span>
-                    </div>
-                  )) || (
-                    <p className="text-slate-400">No recent news available</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Market Context Card */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white">Market Context</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {technicalLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full bg-slate-700" />
-                  <Skeleton className="h-4 w-full bg-slate-700" />
-                  <Skeleton className="h-4 w-full bg-slate-700" />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Volume vs Average</span>
-                    <span className="text-green-500 font-medium">
-                      +{(technicalData?.data as any)?.volume?.volumeRatio || 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Current Volume</span>
-                    <span className="text-blue-500 font-medium">
-                      {((technicalData?.data as any)?.volume?.current || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Options Activity</span>
-                    <span className="text-yellow-500 font-medium">Elevated</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <StockPrimaryDetails tickerSymbol={tickerSymbol} />
       </TabsContent>
 
       <TabsContent value="sentiment" className="mt-6">

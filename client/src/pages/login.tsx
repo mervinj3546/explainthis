@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, ChartLine } from "lucide-react";
-import { FaGoogle, FaTwitter, FaMicrosoft } from "react-icons/fa";
+import { FaGoogle, FaMicrosoft } from "react-icons/fa";
 import { useLogin, useRegister } from "@/hooks/use-auth";
 import { loginSchema, insertUserSchema, type LoginUser, type InsertUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -77,11 +77,22 @@ export default function Login() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    toast({
-      title: "Social Login",
-      description: `${provider} login would be implemented here`,
-      variant: "default",
-    });
+    // Redirect to the OAuth endpoint
+    const providerMap: { [key: string]: string } = {
+      "Google": "/api/auth/google",
+      "Microsoft": "/api/auth/microsoft"
+    };
+    
+    const endpoint = providerMap[provider];
+    if (endpoint) {
+      window.location.href = endpoint;
+    } else {
+      toast({
+        title: "Social Login",
+        description: `${provider} login is not yet configured`,
+        variant: "destructive",
+      });
+    }
   };
 
   const isLoading = loginMutation.isPending || registerMutation.isPending;
@@ -120,15 +131,6 @@ export default function Login() {
             >
               <FaGoogle className="mr-3 h-4 w-4 text-red-400" />
               Continue with Google
-            </Button>
-
-            <Button
-              type="button"
-              className="w-full bg-blue-500 text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 hover:scale-[1.02] active:scale-95"
-              onClick={() => handleSocialLogin("Twitter")}
-            >
-              <FaTwitter className="mr-3 h-4 w-4" />
-              Continue with Twitter
             </Button>
 
             <Button
