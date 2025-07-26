@@ -53,10 +53,10 @@ export default function Login() {
     try {
       await loginMutation.mutateAsync(data);
       setShowSuccess(true);
-      // Small delay to show success message, then redirect happens automatically
+      // Quick redirect after success message
       setTimeout(() => {
         window.location.href = '/dashboard';
-      }, 1500);
+      }, 800);
     } catch (error) {
       console.error('Login error:', error);
     }
@@ -67,10 +67,10 @@ export default function Login() {
       const { confirmPassword, ...registerData } = data;
       await registerMutation.mutateAsync(registerData);
       setShowSuccess(true);
-      // Small delay to show success message, then redirect happens automatically
+      // Quick redirect after success message
       setTimeout(() => {
         window.location.href = '/dashboard';
-      }, 1500);
+      }, 800);
     } catch (error) {
       console.error('Registration error:', error);
     }
