@@ -25,6 +25,11 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
 
   const { data: searchResults = [], isLoading } = useQuery<Ticker[]>({
     queryKey: ["/api/tickers/search", searchQuery],
+    queryFn: async () => {
+      const response = await fetch(`/api/tickers/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) throw new Error('Search failed');
+      return response.json();
+    },
     enabled: searchQuery.length > 0,
   });
 
@@ -51,8 +56,13 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim() && searchResults.length > 0) {
-      handleTickerSelect(searchResults[0].symbol);
+    if (searchQuery.trim()) {
+      if (searchResults.length > 0) {
+        handleTickerSelect(searchResults[0].symbol);
+      } else {
+        // Try to search directly with the entered ticker
+        handleTickerSelect(searchQuery.trim().toUpperCase());
+      }
     }
   };
 
@@ -88,13 +98,13 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
               setShowHistory(true);
             }
           }}
-          className="w-64 pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
         />
         <Button
           type="submit"
           variant="ghost"
           size="sm"
-          className="absolute right-1 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white h-8 w-8 p-0"
         >
           <Search className="h-4 w-4" />
         </Button>
@@ -151,13 +161,13 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
                   onClick={() => handleTickerSelect(item.tickerSymbol)}
                 >
                   <div className="flex justify-between items-center">
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-white">{item.tickerSymbol}</div>
-                      {item.ticker && (
+                      {item.ticker && item.ticker.name && (
                         <div className="text-sm text-slate-400 truncate">{item.ticker.name}</div>
                       )}
                     </div>
-                    {item.ticker && (
+                    {item.ticker ? (
                       <div className="text-right">
                         <div className="text-sm text-white">
                           ${item.ticker.price.toFixed(2)}
@@ -166,6 +176,8 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
                           {item.ticker.change >= 0 ? '+' : ''}{item.ticker.changePercent.toFixed(2)}%
                         </div>
                       </div>
+                    ) : (
+                      <div className="text-xs text-slate-500">No data</div>
                     )}
                   </div>
                 </button>

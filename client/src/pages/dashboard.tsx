@@ -85,7 +85,7 @@ export default function Dashboard() {
 
       {/* Centered Search Bar */}
       <div className="bg-slate-800 border-b border-slate-700 py-4">
-        <div className="max-w-md mx-auto px-4">
+        <div className="max-w-lg mx-auto px-4">
           <TickerSearch onTickerSelect={handleTickerSelect} currentTicker={currentTicker} />
         </div>
       </div>
