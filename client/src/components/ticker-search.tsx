@@ -124,19 +124,9 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
                 className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
                 onClick={() => handleTickerSelect(ticker.symbol)}
               >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-medium text-white">{ticker.symbol}</div>
-                    <div className="text-sm text-slate-400 truncate">{ticker.name}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-white">
-                      ${ticker.price.toFixed(2)}
-                    </div>
-                    <div className={`text-xs ${ticker.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {ticker.change >= 0 ? '+' : ''}{ticker.changePercent.toFixed(2)}%
-                    </div>
-                  </div>
+                <div>
+                  <div className="font-medium text-white">{ticker.symbol}</div>
+                  <div className="text-sm text-slate-400 truncate">{ticker.name}</div>
                 </div>
               </button>
             ))
@@ -160,24 +150,10 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
                   className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
                   onClick={() => handleTickerSelect(item.tickerSymbol)}
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="font-medium text-white">{item.tickerSymbol}</div>
-                      {item.ticker && item.ticker.name && (
-                        <div className="text-sm text-slate-400 truncate">{item.ticker.name}</div>
-                      )}
-                    </div>
-                    {item.ticker ? (
-                      <div className="text-right">
-                        <div className="text-sm text-white">
-                          ${item.ticker.price.toFixed(2)}
-                        </div>
-                        <div className={`text-xs ${item.ticker.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {item.ticker.change >= 0 ? '+' : ''}{item.ticker.changePercent.toFixed(2)}%
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-500">No data</div>
+                  <div>
+                    <div className="font-medium text-white">{item.tickerSymbol}</div>
+                    {item.ticker && item.ticker.name && (
+                      <div className="text-sm text-slate-400 truncate">{item.ticker.name}</div>
                     )}
                   </div>
                 </button>

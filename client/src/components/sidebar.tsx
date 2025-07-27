@@ -139,7 +139,7 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
                     <span className="font-medium text-white">{item.tickerSymbol}</span>
                     {item.ticker && (
                       <div className="flex justify-between items-center mt-1">
-                        <span className="text-sm text-slate-400">{formatPrice(item.ticker.price)}</span>
+                        <span className="text-sm text-slate-200">{formatPrice(item.ticker.price)}</span>
                         <span className={`text-sm ${getChangeColor(item.ticker.change)}`}>
                           {formatChange(item.ticker.change, item.ticker.changePercent)}
                         </span>
@@ -180,7 +180,7 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
                     <span className="font-medium text-white">{item.tickerSymbol}</span>
                     {item.ticker && (
                       <div className="flex justify-between items-center mt-1">
-                        <span className="text-sm text-slate-400">{formatPrice(item.ticker.price)}</span>
+                        <span className="text-sm text-slate-200">{formatPrice(item.ticker.price)}</span>
                         <span className={`text-sm ${getChangeColor(item.ticker.change)}`}>
                           {formatChange(item.ticker.change, item.ticker.changePercent)}
                         </span>
