@@ -9,12 +9,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sidebar } from "@/components/sidebar";
 import { TickerSearch } from "@/components/ticker-search";
 import { ContentTabs } from "@/components/content-tabs";
+import LandingPage from "@/pages/landing";
 import type { Ticker } from "@shared/schema";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const logoutMutation = useLogout();
-  const [currentTicker, setCurrentTicker] = useState<string>("AAPL");
+  const [currentTicker, setCurrentTicker] = useState<string>("");
 
   const { data: tickerData, isLoading: tickerLoading } = useQuery<Ticker>({
     queryKey: ["/api/tickers", currentTicker],
@@ -40,6 +41,11 @@ export default function Dashboard() {
   const getChangeColor = (change: number) => {
     return change >= 0 ? 'text-green-500' : 'text-red-500';
   };
+
+  // Show landing page when no ticker is selected
+  if (!currentTicker) {
+    return <LandingPage onTickerSelect={handleTickerSelect} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900">

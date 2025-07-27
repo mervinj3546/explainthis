@@ -21,21 +21,30 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: searchResults = [], isLoading } = useQuery<Ticker[]>({
-    queryKey: ["/api/tickers/search", searchQuery],
-    queryFn: async () => {
-      const response = await fetch(`/api/tickers/search?q=${encodeURIComponent(searchQuery)}`);
-      if (!response.ok) throw new Error('Search failed');
-      return response.json();
-    },
-    enabled: searchQuery.length > 0,
-  });
-
+  // Remove the API-based search results, we'll use search history instead
   const { data: searchHistory = [] } = useQuery<SearchHistoryItem[]>({
     queryKey: ["/api/search-history"],
   });
+
+  // Filter search history based on search query and remove duplicates
+  const filteredSuggestions = searchQuery.length > 0 
+    ? searchHistory
+        .filter(item => 
+          item.tickerSymbol.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .reduce((unique, item) => {
+          // Remove duplicates by ticker symbol
+          const exists = unique.find(u => u.tickerSymbol === item.tickerSymbol);
+          if (!exists) {
+            unique.push(item);
+          }
+          return unique;
+        }, [] as SearchHistoryItem[])
+        .slice(0, 5) // Limit to 5 suggestions
+    : [];
 
   const addToSearchHistoryMutation = useMutation({
     mutationFn: async (symbol: string) => {
@@ -57,76 +66,103 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      if (searchResults.length > 0) {
-        handleTickerSelect(searchResults[0].symbol);
-      } else {
-        // Try to search directly with the entered ticker
-        handleTickerSelect(searchQuery.trim().toUpperCase());
-      }
+      // Clear dropdown states
+      setShowResults(false);
+      setShowHistory(false);
+      setHasSearched(true); // Mark that a search has been completed
+      // Always use exactly what the user typed, no autocomplete
+      onTickerSelect(searchQuery.trim().toUpperCase());
+      addToSearchHistoryMutation.mutate(searchQuery.trim().toUpperCase());
     }
   };
 
   useEffect(() => {
     if (currentTicker) {
       setSearchQuery(currentTicker);
+      setHasSearched(true); // Mark as searched when ticker is set
+      setShowResults(false); // Ensure dropdown is hidden
+      setShowHistory(false);
     }
   }, [currentTicker]);
 
   return (
     <div className="relative">
-      <form onSubmit={handleSearch} className="relative">
-        <Input
-          type="text"
-          placeholder="Search ticker (e.g., AAPL)"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setShowResults(e.target.value.length > 0);
-            setShowHistory(false);
-          }}
-          onBlur={() => {
-            // Delay hiding results to allow for clicking
-            setTimeout(() => {
-              setShowResults(false);
+      <form onSubmit={handleSearch} className="relative flex gap-3">
+        <div className="relative flex-1">
+          <Input
+            type="text"
+            placeholder="Search ticker (e.g., AAPL)"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setHasSearched(false); // Reset search completed flag when user types
+              setShowResults(e.target.value.length > 0);
               setShowHistory(false);
-            }, 150);
-          }}
-          onFocus={() => {
-            if (searchQuery.length > 0) {
-              setShowResults(true);
-            } else {
-              setShowHistory(true);
-            }
-          }}
-          className="w-full pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
-        />
+            }}
+            onBlur={() => {
+              // Delay hiding results to allow for clicking
+              setTimeout(() => {
+                setShowResults(false);
+                setShowHistory(false);
+              }, 150);
+            }}
+            onFocus={() => {
+              if (searchQuery.length > 0 && !hasSearched) {
+                setShowResults(true);
+                setShowHistory(false);
+              } else if (searchQuery.length === 0) {
+                setShowHistory(true);
+                setShowResults(false);
+              }
+              // If hasSearched is true and searchQuery.length > 0, don't show dropdown
+            }}
+            className="w-full h-14 pr-14 text-lg bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white h-10 w-10 p-0"
+            onClick={() => {
+              if (searchQuery.length > 0 && !hasSearched) {
+                setShowResults(true);
+                setShowHistory(false);
+              } else if (searchQuery.length === 0) {
+                setShowHistory(true);
+                setShowResults(false);
+              }
+              // If hasSearched is true, don't show dropdown
+            }}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+        </div>
         <Button
           type="submit"
-          variant="ghost"
-          size="sm"
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white h-8 w-8 p-0"
+          className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+          disabled={!searchQuery.trim()}
         >
-          <Search className="h-4 w-4" />
+          Search
         </Button>
       </form>
 
-      {/* Search Results Dropdown */}
+      {/* Search Suggestions Dropdown (from search history) */}
       {showResults && searchQuery.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-          {isLoading ? (
-            <div className="p-3 text-slate-400 text-sm">Searching...</div>
-          ) : searchResults.length === 0 ? (
-            <div className="p-3 text-slate-400 text-sm">No results found</div>
+        <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" style={{ width: 'calc(100% - 7rem)' }}>
+          {filteredSuggestions.length === 0 ? (
+            <div className="p-3 text-slate-400 text-sm">No matching previous searches</div>
           ) : (
-            searchResults.map((ticker) => (
+            filteredSuggestions.map((item) => (
               <button
-                key={ticker.symbol}
+                key={item.id}
                 className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
-                onClick={() => handleTickerSelect(ticker.symbol)}
+                onClick={() => handleTickerSelect(item.tickerSymbol)}
               >
                 <div>
-                  <div className="font-medium text-white">{ticker.symbol}</div>
-                  <div className="text-sm text-slate-400 truncate">{ticker.name}</div>
+                  <div className="font-medium text-white">{item.tickerSymbol}</div>
+                  <div className="text-sm text-slate-400 truncate">
+                    {item.ticker?.name || `${item.tickerSymbol} Inc.`}
+                  </div>
                 </div>
               </button>
             ))
@@ -136,7 +172,7 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
 
       {/* Previously Searched Dropdown */}
       {showHistory && searchQuery.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto" style={{ width: 'calc(100% - 7rem)' }}>
           {searchHistory.length === 0 ? (
             <div className="p-3 text-slate-400 text-sm">No recent searches</div>
           ) : (
@@ -144,7 +180,17 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
               <div className="p-2 border-b border-slate-700">
                 <div className="text-xs text-slate-400 font-medium uppercase tracking-wide">Previously Searched</div>
               </div>
-              {searchHistory.slice(0, 5).map((item) => (
+              {searchHistory
+                .reduce((unique, item) => {
+                  // Remove duplicates by ticker symbol
+                  const exists = unique.find(u => u.tickerSymbol === item.tickerSymbol);
+                  if (!exists) {
+                    unique.push(item);
+                  }
+                  return unique;
+                }, [] as SearchHistoryItem[])
+                .slice(0, 5)
+                .map((item) => (
                 <button
                   key={item.id}
                   className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
