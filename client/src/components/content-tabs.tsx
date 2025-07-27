@@ -64,7 +64,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           value="sentiment"
           className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
         >
-          Retail vs Pro Sentiment
+          Sentiment Analysis
         </TabsTrigger>
       </TabsList>
 
@@ -77,7 +77,11 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           {/* Retail Sentiment */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white">Retail Sentiment</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <span className="text-2xl">📱</span>
+                Retail Sentiment
+                <span className="text-sm text-slate-400 font-normal">(Reddit, StockTwits)</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {sentimentLoading ? (
@@ -86,14 +90,51 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <Skeleton className="h-4 w-32 mx-auto bg-slate-700" />
                 </div>
               ) : (
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-green-500 mb-2">
-                    {(sentimentData?.data as any)?.retail?.score || 0}%
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-green-500 mb-2">
+                      {(sentimentData?.data as any)?.retail?.score || 0}%
+                    </div>
+                    <div className="text-slate-400 mb-1">
+                      {(sentimentData?.data as any)?.retail?.sentiment || "Neutral"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Confidence: {(sentimentData?.data as any)?.retail?.confidence || 0}%
+                      {(sentimentData?.data as any)?.retail?.postsAnalyzed && (
+                        <span className="ml-2">• {(sentimentData?.data as any).retail.postsAnalyzed} posts analyzed</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-slate-400">{(sentimentData?.data as any)?.retail?.sentiment || "Neutral"}</div>
-                  <div className="h-32 bg-slate-700 rounded-lg flex items-center justify-center mt-4">
-                    <span className="text-slate-400">Sentiment Chart Placeholder</span>
+                  
+                  {/* Sentiment Gauge */}
+                  <div className="w-full bg-slate-700 rounded-full h-3 mb-4">
+                    <div 
+                      className="h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${(sentimentData?.data as any)?.retail?.score || 0}%`,
+                        backgroundColor: 
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 60 ? '#10B981' :
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'
+                      }}
+                    ></div>
                   </div>
+                  
+                  {/* Source Breakdown */}
+                  {(sentimentData?.data as any)?.retail?.sources && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-300">Source Breakdown:</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Reddit:</span>
+                          <span className="text-white">{(sentimentData?.data as any).retail.sources.reddit}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">StockTwits:</span>
+                          <span className="text-white">{Math.round((sentimentData?.data as any).retail.sources.stocktwits || 0)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -102,7 +143,11 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           {/* Professional Sentiment */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-white">Professional Sentiment</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <span className="text-2xl">🏦</span>
+                Professional Sentiment
+                <span className="text-sm text-slate-400 font-normal">(News, Analysts)</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {sentimentLoading ? (
@@ -111,19 +156,130 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <Skeleton className="h-4 w-32 mx-auto bg-slate-700" />
                 </div>
               ) : (
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-blue-500 mb-2">
-                    {(sentimentData?.data as any)?.professional?.score || 0}%
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-blue-500 mb-2">
+                      {(sentimentData?.data as any)?.professional?.score || 0}%
+                    </div>
+                    <div className="text-slate-400 mb-1">
+                      {(sentimentData?.data as any)?.professional?.sentiment || "Neutral"}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Confidence: {(sentimentData?.data as any)?.professional?.confidence || 0}%
+                      {(sentimentData?.data as any)?.professional?.postsAnalyzed && (
+                        <span className="ml-2">• {(sentimentData?.data as any).professional.postsAnalyzed} sources analyzed</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-slate-400">{(sentimentData?.data as any)?.professional?.sentiment || "Neutral"}</div>
-                  <div className="h-32 bg-slate-700 rounded-lg flex items-center justify-center mt-4">
-                    <span className="text-slate-400">Pro Sentiment Chart Placeholder</span>
+                  
+                  {/* Sentiment Gauge */}
+                  <div className="w-full bg-slate-700 rounded-full h-3 mb-4">
+                    <div 
+                      className="h-3 rounded-full transition-all duration-500 ease-out"
+                      style={{
+                        width: `${(sentimentData?.data as any)?.professional?.score || 0}%`,
+                        backgroundColor: 
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 60 ? '#3B82F6' :
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'
+                      }}
+                    ></div>
                   </div>
+                  
+                  {/* Source Breakdown */}
+                  {(sentimentData?.data as any)?.professional?.sources && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-slate-300">Source Breakdown:</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">News:</span>
+                          <span className="text-white">{(sentimentData?.data as any).professional.sources.news}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Analysts:</span>
+                          <span className="text-white">{Math.round((sentimentData?.data as any).professional.sources.analysts || 0)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
+        
+        {/* Sentiment Insights */}
+        {!sentimentLoading && (
+          <Card className="bg-gradient-to-r from-slate-800 to-slate-700 border-slate-600 mt-6">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <span className="text-xl">🧠</span>
+                Sentiment Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(() => {
+                  const retailScore = (sentimentData?.data as any)?.retail?.score || 50;
+                  const professionalScore = (sentimentData?.data as any)?.professional?.score || 50;
+                  const divergence = Math.abs(retailScore - professionalScore);
+                  
+                  const insights = [];
+                  
+                  if (divergence > 20) {
+                    if (retailScore > professionalScore) {
+                      insights.push({
+                        icon: "⚠️",
+                        text: `Retail investors are significantly more bullish than professionals (${divergence.toFixed(0)} point gap)`,
+                        color: "text-yellow-400"
+                      });
+                    } else {
+                      insights.push({
+                        icon: "📈",
+                        text: `Professionals are more optimistic than retail investors (${divergence.toFixed(0)} point gap)`,
+                        color: "text-blue-400"
+                      });
+                    }
+                  } else {
+                    insights.push({
+                      icon: "🤝",
+                      text: "Retail and professional sentiment are aligned",
+                      color: "text-green-400"
+                    });
+                  }
+                  
+                  if (retailScore >= 70) {
+                    insights.push({
+                      icon: "🚀",
+                      text: "Strong retail momentum detected",
+                      color: "text-green-400"
+                    });
+                  } else if (retailScore <= 30) {
+                    insights.push({
+                      icon: "📉",
+                      text: "Retail sentiment shows significant bearishness",
+                      color: "text-red-400"
+                    });
+                  }
+                  
+                  if (professionalScore >= 65) {
+                    insights.push({
+                      icon: "💼",
+                      text: "Professional analysts maintain positive outlook",
+                      color: "text-blue-400"
+                    });
+                  }
+                  
+                  return insights.map((insight, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-slate-700/50 rounded-lg">
+                      <span className="text-lg">{insight.icon}</span>
+                      <span className={`text-sm ${insight.color}`}>{insight.text}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </TabsContent>
 
       <TabsContent value="fundamentals" className="mt-6">

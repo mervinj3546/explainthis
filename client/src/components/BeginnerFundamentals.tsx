@@ -283,14 +283,6 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                   </ul>
                 </div>
               )}
-              
-              <div className="bg-slate-600/30 rounded-lg p-3">
-                <p className="text-slate-300 text-sm">
-                  <strong>For Beginners:</strong> Look at the complete picture - a company with growing revenue, 
-                  good profitability (ROE {'>'} 15%), and reasonable valuation (P/E {'<'} 25) typically makes a solid investment. 
-                  Don't focus on just one metric!
-                </p>
-              </div>
             </div>
           </CardContent>
         </Card>
