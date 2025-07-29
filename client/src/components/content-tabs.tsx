@@ -92,7 +92,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               ) : (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-green-500 mb-2">
+                    <div 
+                      className="text-4xl font-bold mb-2"
+                      style={{
+                        color: 
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 60 ? '#10B981' :  // Green
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'  // Yellow : Red
+                      }}
+                    >
                       {(sentimentData?.data as any)?.retail?.score || 0}%
                     </div>
                     <div className="text-slate-400 mb-1">
@@ -113,8 +120,8 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       style={{
                         width: `${(sentimentData?.data as any)?.retail?.score || 0}%`,
                         backgroundColor: 
-                          ((sentimentData?.data as any)?.retail?.score || 0) >= 60 ? '#10B981' :
-                          ((sentimentData?.data as any)?.retail?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 60 ? '#10B981' :  // Green
+                          ((sentimentData?.data as any)?.retail?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'  // Yellow : Red
                       }}
                     ></div>
                   </div>
@@ -158,7 +165,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               ) : (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-500 mb-2">
+                    <div 
+                      className="text-4xl font-bold mb-2"
+                      style={{
+                        color: 
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 60 ? '#10B981' :  // Green
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'  // Yellow : Red
+                      }}
+                    >
                       {(sentimentData?.data as any)?.professional?.score || 0}%
                     </div>
                     <div className="text-slate-400 mb-1">
@@ -179,8 +193,8 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       style={{
                         width: `${(sentimentData?.data as any)?.professional?.score || 0}%`,
                         backgroundColor: 
-                          ((sentimentData?.data as any)?.professional?.score || 0) >= 60 ? '#3B82F6' :
-                          ((sentimentData?.data as any)?.professional?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 60 ? '#10B981' :  // Green
+                          ((sentimentData?.data as any)?.professional?.score || 0) >= 40 ? '#F59E0B' : '#EF4444'  // Yellow : Red
                       }}
                     ></div>
                   </div>
