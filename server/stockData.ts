@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { storage } from './storage';
 
 interface NewsItem {
   headline: string;
@@ -89,7 +90,7 @@ export async function getBasicStockData(req: Request, res: Response) {
         }))
       : [];
 
-    // Fetch YTD data using Polygon API
+    // Fetch YTD data using cached Polygon API
     let ytdData: YTDData = {
       priceOnJan1: null,
       yearHigh: null,
@@ -98,53 +99,66 @@ export async function getBasicStockData(req: Request, res: Response) {
     };
 
     try {
-      console.log(`Attempting to fetch YTD data for ${normalizedTicker} using Polygon API...`);
+      console.log(`Attempting to fetch YTD data for ${normalizedTicker}...`);
       
-      // Calculate date range for current year
-      const now = new Date();
-      const yearStart = new Date(now.getFullYear(), 0, 1);
-      
-      // Format dates for Polygon API (YYYY-MM-DD)
-      const fromDate = yearStart.toISOString().split('T')[0];
-      const toDate = now.toISOString().split('T')[0];
-      
-      console.log(`Date range: ${fromDate} to ${toDate}`);
-      
-      // Polygon aggregates endpoint for daily bars
-      const polygonUrl = `https://api.polygon.io/v2/aggs/ticker/${normalizedTicker}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&limit=300&apikey=${polygonToken}`;
-      
-      const polygonRes = await fetch(polygonUrl);
-      
-      if (polygonRes.ok) {
-        const polygonData = await polygonRes.json();
-        console.log(`Polygon response status: ${polygonData.status}, results count: ${polygonData.resultsCount || 0}`);
-        
-        if ((polygonData.status === "OK" || polygonData.status === "DELAYED") && polygonData.results && polygonData.results.length > 0) {
-          const results = polygonData.results;
-          
-          // Get first trading day closing price as Jan 1st baseline
-          ytdData.priceOnJan1 = results[0].c;
-          
-          // Calculate year high and low from all data points
-          const highs = results.map((r: any) => r.h);
-          const lows = results.map((r: any) => r.l);
-          
-          ytdData.yearHigh = Math.max(...highs);
-          ytdData.yearLow = Math.min(...lows);
-          
-          // Calculate YTD growth percentage using current price vs Jan 1st
-          if (ytdData.priceOnJan1 && quoteData.c) {
-            ytdData.growthPct = ((quoteData.c - ytdData.priceOnJan1) / ytdData.priceOnJan1) * 100;
-          }
-          
-          console.log(`YTD data calculated: Jan1=${ytdData.priceOnJan1}, Current=${quoteData.c}, High=${ytdData.yearHigh}, Low=${ytdData.yearLow}, Growth=${ytdData.growthPct?.toFixed(2)}%`);
-        } else {
-          console.log(`No YTD data available from Polygon: status=${polygonData.status}, message=${polygonData.message || 'Unknown'}`);
-        }
+      // Check cache first
+      const cachedYtd = await storage.getTickerData(normalizedTicker, 'ytd');
+      if (cachedYtd && !await storage.isCacheExpired(normalizedTicker, 'ytd')) {
+        console.log(`Using cached YTD data for ${normalizedTicker}`);
+        ytdData = cachedYtd.data as YTDData;
       } else {
-        console.log(`Polygon API error for ${normalizedTicker}: ${polygonRes.status} ${polygonRes.statusText}`);
-        const errorText = await polygonRes.text();
-        console.log(`Error details: ${errorText}`);
+        console.log(`Fetching fresh YTD data for ${normalizedTicker} from Polygon API...`);
+        
+        // Calculate date range for current year
+        const now = new Date();
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        
+        // Format dates for Polygon API (YYYY-MM-DD)
+        const fromDate = yearStart.toISOString().split('T')[0];
+        const toDate = now.toISOString().split('T')[0];
+        
+        console.log(`Date range: ${fromDate} to ${toDate}`);
+        
+        // Polygon aggregates endpoint for daily bars
+        const polygonUrl = `https://api.polygon.io/v2/aggs/ticker/${normalizedTicker}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&limit=300&apikey=${polygonToken}`;
+        
+        const polygonRes = await fetch(polygonUrl);
+        
+        if (polygonRes.ok) {
+          const polygonData = await polygonRes.json();
+          console.log(`Polygon response status: ${polygonData.status}, results count: ${polygonData.resultsCount || 0}`);
+          
+          if ((polygonData.status === "OK" || polygonData.status === "DELAYED") && polygonData.results && polygonData.results.length > 0) {
+            const results = polygonData.results;
+            
+            // Get first trading day closing price as Jan 1st baseline
+            ytdData.priceOnJan1 = results[0].c;
+            
+            // Calculate year high and low from all data points
+            const highs = results.map((r: any) => r.h);
+            const lows = results.map((r: any) => r.l);
+            
+            ytdData.yearHigh = Math.max(...highs);
+            ytdData.yearLow = Math.min(...lows);
+            
+            // Calculate YTD growth percentage using current price vs Jan 1st
+            if (ytdData.priceOnJan1 && quoteData.c) {
+              ytdData.growthPct = ((quoteData.c - ytdData.priceOnJan1) / ytdData.priceOnJan1) * 100;
+            }
+            
+            // Cache the YTD data for 12 hours
+            await storage.saveTickerData(normalizedTicker, 'ytd', ytdData);
+            console.log(`YTD data cached for ${normalizedTicker}`);
+            
+            console.log(`YTD data calculated: Jan1=${ytdData.priceOnJan1}, Current=${quoteData.c}, High=${ytdData.yearHigh}, Low=${ytdData.yearLow}, Growth=${ytdData.growthPct?.toFixed(2)}%`);
+          } else {
+            console.log(`No YTD data available from Polygon: status=${polygonData.status}, message=${polygonData.message || 'Unknown'}`);
+          }
+        } else {
+          console.log(`Polygon API error for ${normalizedTicker}: ${polygonRes.status} ${polygonRes.statusText}`);
+          const errorText = await polygonRes.text();
+          console.log(`Error details: ${errorText}`);
+        }
       }
     } catch (error) {
       console.error(`Error fetching YTD data for ${normalizedTicker}:`, error);

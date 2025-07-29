@@ -12,6 +12,41 @@ import { fetchRedditPosts, fetchStockTwitsPosts } from "./redditFetcher";
 
 const MemoryStoreSession = MemoryStore(session);
 
+// Helper function to get cached price data
+async function getCachedPriceData(symbol: string) {
+  try {
+    // Check cache first
+    const cached = await storage.getTickerData(symbol.toUpperCase(), 'realtime-price');
+    if (cached && !await storage.isCacheExpired(symbol.toUpperCase(), 'realtime-price')) {
+      return cached.data;
+    }
+
+    // Fetch fresh data if cache is expired
+    const finnhubToken = process.env.FINNHUB_API_KEY;
+    if (!finnhubToken) {
+      return null;
+    }
+
+    const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol.toUpperCase()}&token=${finnhubToken}`;
+    const quoteRes = await fetch(quoteUrl);
+    
+    if (quoteRes.ok && quoteRes.status !== 429) {
+      const quoteData = await quoteRes.json();
+      
+      if (quoteData && quoteData.c !== 0) {
+        // Cache the fresh data
+        await storage.saveTickerData(symbol.toUpperCase(), 'realtime-price', quoteData);
+        return quoteData;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error fetching cached price data for ${symbol}:`, error);
+    return null;
+  }
+}
+
 // Extend session interface to include userId
 declare module "express-session" {
   interface SessionData {
@@ -141,40 +176,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { symbol } = req.params;
       
-      // Try to get real-time stock data from Finnhub API (same as getBasicStockData)
-      const finnhubToken = process.env.FINNHUB_API_KEY;
+      // Try to get cached real-time stock data
+      const quoteData = await getCachedPriceData(symbol);
       
-      if (finnhubToken) {
-        try {
-          const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubToken}`;
-          const quoteRes = await fetch(quoteUrl);
-          
-          if (quoteRes.ok && quoteRes.status !== 429) {
-            const quoteData = await quoteRes.json();
-            
-            if (quoteData && quoteData.c !== 0) {
-              const priceChange = quoteData.c - quoteData.pc;
-              const priceChangePercent = (priceChange / quoteData.pc) * 100;
-              
-              const realTimeData = {
-                id: symbol,
-                symbol: symbol,
-                name: `${symbol} Inc.`, // Fallback name - could be enhanced with company name API
-                price: quoteData.c, // Current price
-                change: priceChange,
-                changePercent: priceChangePercent,
-                volume: 0, // Would need additional API call for volume
-                marketCap: 0, // Would need additional API call for market cap
-                createdAt: new Date(),
-                updatedAt: new Date()
-              };
-              
-              return res.json(realTimeData);
-            }
-          }
-        } catch (apiError) {
-          console.log(`Failed to fetch real-time data for ${symbol} from Finnhub:`, apiError);
-        }
+      if (quoteData) {
+        const priceChange = quoteData.c - quoteData.pc;
+        const priceChangePercent = (priceChange / quoteData.pc) * 100;
+        
+        const realTimeData = {
+          id: symbol,
+          symbol: symbol,
+          name: `${symbol} Inc.`, // Fallback name - could be enhanced with company name API
+          price: quoteData.c, // Current price
+          change: priceChange,
+          changePercent: priceChangePercent,
+          volume: 0, // Would need additional API call for volume
+          marketCap: 0, // Would need additional API call for market cap
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        return res.json(realTimeData);
       }
       
       // Fallback to stored ticker data if API call fails
@@ -200,36 +222,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const watchlist = await storage.getUserWatchlist(req.session.userId);
       const tickersWithData = await Promise.all(
         watchlist.map(async (item) => {
-          // Get real-time data from Finnhub instead of stored demo data
-          try {
-            const finnhubToken = process.env.FINNHUB_API_KEY;
-            if (finnhubToken) {
-              const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${item.tickerSymbol}&token=${finnhubToken}`;
-              const quoteRes = await fetch(quoteUrl);
-              
-              if (quoteRes.ok) {
-                const quoteData = await quoteRes.json();
-                const priceChange = quoteData.c - quoteData.pc;
-                const priceChangePercent = (priceChange / quoteData.pc) * 100;
-                
-                const realTimeData = {
-                  symbol: item.tickerSymbol,
-                  name: `${item.tickerSymbol} Inc.`, // Simplified name
-                  price: quoteData.c,
-                  change: priceChange,
-                  changePercent: priceChangePercent,
-                  volume: 0, // Not used in sidebar
-                  marketCap: 0 // Not used in sidebar
-                };
-                
-                return { ...item, ticker: realTimeData };
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching real-time data for ${item.tickerSymbol}:`, error);
+          // Get cached real-time data
+          const quoteData = await getCachedPriceData(item.tickerSymbol);
+          
+          if (quoteData) {
+            const priceChange = quoteData.c - quoteData.pc;
+            const priceChangePercent = (priceChange / quoteData.pc) * 100;
+            
+            const realTimeData = {
+              symbol: item.tickerSymbol,
+              name: `${item.tickerSymbol} Inc.`, // Simplified name
+              price: quoteData.c,
+              change: priceChange,
+              changePercent: priceChangePercent,
+              volume: 0, // Not used in sidebar
+              marketCap: 0 // Not used in sidebar
+            };
+            
+            return { ...item, ticker: realTimeData };
           }
           
-          // Fallback to stored data if real-time fetch fails
+          // Fallback to stored data if cached fetch fails
           const ticker = await storage.getTicker(item.tickerSymbol);
           return { ...item, ticker };
         })
@@ -271,36 +284,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const history = await storage.getUserSearchHistory(req.session.userId);
       const historyWithTickers = await Promise.all(
         history.map(async (item) => {
-          // Get real-time data from Finnhub instead of stored demo data
-          try {
-            const finnhubToken = process.env.FINNHUB_API_KEY;
-            if (finnhubToken) {
-              const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${item.tickerSymbol}&token=${finnhubToken}`;
-              const quoteRes = await fetch(quoteUrl);
-              
-              if (quoteRes.ok) {
-                const quoteData = await quoteRes.json();
-                const priceChange = quoteData.c - quoteData.pc;
-                const priceChangePercent = (priceChange / quoteData.pc) * 100;
-                
-                const realTimeData = {
-                  symbol: item.tickerSymbol,
-                  name: `${item.tickerSymbol} Inc.`, // Simplified name
-                  price: quoteData.c,
-                  change: priceChange,
-                  changePercent: priceChangePercent,
-                  volume: 0, // Not used in sidebar
-                  marketCap: 0 // Not used in sidebar
-                };
-                
-                return { ...item, ticker: realTimeData };
-              }
-            }
-          } catch (error) {
-            console.error(`Error fetching real-time data for ${item.tickerSymbol}:`, error);
+          // Get cached real-time data
+          const quoteData = await getCachedPriceData(item.tickerSymbol);
+          
+          if (quoteData) {
+            const priceChange = quoteData.c - quoteData.pc;
+            const priceChangePercent = (priceChange / quoteData.pc) * 100;
+            
+            const realTimeData = {
+              symbol: item.tickerSymbol,
+              name: `${item.tickerSymbol} Inc.`, // Simplified name
+              price: quoteData.c,
+              change: priceChange,
+              changePercent: priceChangePercent,
+              volume: 0, // Not used in sidebar
+              marketCap: 0 // Not used in sidebar
+            };
+            
+            return { ...item, ticker: realTimeData };
           }
           
-          // Fallback to stored data if real-time fetch fails
+          // Fallback to stored data if cached fetch fails
           const ticker = await storage.getTicker(item.tickerSymbol);
           return { ...item, ticker };
         })

@@ -269,6 +269,8 @@ export class MemStorage implements IStorage {
         return cacheAge > 30 * 60 * 1000; // 30 minutes for sentiment analysis
       case 'ytd':
         return cacheAge > 12 * 60 * 60 * 1000; // 12 hours for YTD data
+      case 'realtime-price':
+        return cacheAge > 1 * 60 * 1000; // 1 minute for real-time price data
       default:
         return cacheAge > 60 * 60 * 1000; // 1 hour default
     }
@@ -558,6 +560,8 @@ export class DbStorage implements IStorage {
         return cacheAge > 30 * 60 * 1000; // 30 minutes for sentiment analysis
       case 'ytd':
         return cacheAge > 12 * 60 * 60 * 1000; // 12 hours for YTD data
+      case 'realtime-price':
+        return cacheAge > 1 * 60 * 1000; // 1 minute for real-time price data
       default:
         return cacheAge > 60 * 60 * 1000; // 1 hour default
     }

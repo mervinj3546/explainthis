@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { storage } from './storage';
 
 interface HistoricalPrice {
   date: string;
@@ -100,6 +101,15 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
   try {
     console.log(`Fetching technical indicators for ${normalizedTicker}...`);
     
+    // Check cache first
+    const cachedTechnical = await storage.getTickerData(normalizedTicker, 'technical');
+    if (cachedTechnical && !await storage.isCacheExpired(normalizedTicker, 'technical')) {
+      console.log(`Using cached technical data for ${normalizedTicker}`);
+      return res.json(cachedTechnical.data);
+    }
+    
+    console.log(`Fetching fresh technical data for ${normalizedTicker} from Polygon API...`);
+    
     // Get 6 months of daily data for technical analysis
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -157,6 +167,10 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
       rsi,
       prices: historicalData
     };
+    
+    // Cache the technical data for 12 hours
+    await storage.saveTickerData(normalizedTicker, 'technical', response);
+    console.log(`Technical data cached for ${normalizedTicker}`);
     
     console.log(`Technical indicators calculated for ${normalizedTicker}: ${historicalData.length} data points`);
     res.json(response);
