@@ -6,9 +6,13 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Make optional for OAuth users
   firstName: text("first_name"),
   lastName: text("last_name"),
+  profilePicture: text("profile_picture"), // For OAuth profile images
+  provider: text("provider"), // 'local', 'google', 'facebook', 'microsoft'
+  providerId: text("provider_id"), // OAuth provider's user ID
+  emailVerified: timestamp("email_verified"), // For OAuth users, auto-verified
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -51,11 +55,23 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   firstName: true,
   lastName: true,
+}).extend({
+  password: z.string().min(8).optional(), // Make password optional for OAuth
 });
 
-export const loginSchema = createInsertSchema(users).pick({
-  email: true,
-  password: true,
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1, "Password is required"),
+});
+
+// OAuth user creation schema
+export const oauthUserSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  profilePicture: z.string().url().optional(),
+  provider: z.enum(['google', 'facebook']),
+  providerId: z.string(),
 });
 
 export const insertTickerSchema = createInsertSchema(tickers).omit({
@@ -65,6 +81,7 @@ export const insertTickerSchema = createInsertSchema(tickers).omit({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
+export type OAuthUser = z.infer<typeof oauthUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Ticker = typeof tickers.$inferSelect;
 export type UserWatchlist = typeof userWatchlists.$inferSelect;

@@ -7,7 +7,9 @@ import MemoryStore from "memorystore";
 import passport from "./auth";
 import { getBasicStockData } from "./stockData";
 import { getTechnicalIndicators } from "./technicalAnalysis";
-import { generateMockRedditSentiment, generateMockNewsSentiment, aggregateSentiment, analyzeSentimentAdvanced } from "./sentimentAnalysis";
+import { generateMockRedditSentiment, aggregateSentiment, generateNoDataSentiment, analyzeSentimentAdvanced } from './sentimentAnalysis';
+import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalSentimentResult } from './professionalSentiment';
+import { professionalSentimentCache, logCacheStats } from './sentimentCache';
 import { fetchRedditPosts, fetchStockTwitsPosts } from "./redditFetcher";
 
 const MemoryStoreSession = MemoryStore(session);
@@ -327,6 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Ticker data routes (for financial information)
   app.get("/api/ticker-data/:symbol/:type", async (req, res) => {
+    console.log("🔥🔥🔥 THIS IS THE ROUTE HANDLER EXECUTING 🔥🔥🔥");
+    console.log("🔥 ROUTE HANDLER HIT");
     try {
       const { symbol, type } = req.params;
       const { refresh } = req.query;
@@ -353,6 +357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let apiData;
         const finnhubToken = process.env.FINNHUB_API_KEY;
         
+        console.log(`🚀 ENTERING SWITCH CASE for ${symbol}/${type}`);
         switch (type) {
           case 'fundamentals':
             if (finnhubToken) {
@@ -478,10 +483,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
             
           case 'sentiment':
+            console.log(`🚨 ENTERING SENTIMENT CASE for ${symbol}`);
             // Try to fetch real Reddit and StockTwits data
             let redditSentiment;
-            let newsSentiment;
+            let newsSentiment: ProfessionalSentimentResult = {
+              score: 0,
+              sentiment: 'Professional Sentiment Not Available',
+              confidence: 0,
+              postsAnalyzed: 0,
+              sources: { news: 0, analysts: 0 }
+            };
             
+            // Fetch social media sentiment (Reddit/StockTwits)
             try {
               console.log(`Fetching real sentiment data for ${symbol}...`);
               
@@ -507,12 +520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     source: 'reddit'
                   };
                 });
-                
-                redditSentiment = aggregateSentiment(redditSentiments);
-                console.log(`Reddit sentiment for ${symbol}:`, redditSentiment);
+                console.log(`Reddit sentiment for ${symbol}:`, redditSentiments.length, 'posts analyzed');
               } else {
-                redditSentiment = generateMockRedditSentiment(symbol);
-                console.log(`Using mock Reddit sentiment for ${symbol} (no posts found)`);
+                console.log(`No Reddit posts found for ${symbol}`);
               }
               
               // Analyze StockTwits sentiment
@@ -527,7 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   };
                 });
                 
-                // Combine Reddit + StockTwits sentiments properly
+                // Combine Reddit + StockTwits sentiments
                 const allSentiments = [
                   ...redditSentiments,
                   ...stockTwitsSentiments
@@ -535,37 +545,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 redditSentiment = aggregateSentiment(allSentiments);
                 redditSentiment.postsAnalyzed = redditPosts.length + stockTwitsPosts.length;
+                console.log(`Combined sentiment analysis: ${redditPosts.length} Reddit + ${stockTwitsPosts.length} StockTwits posts`);
+              } else if (redditSentiments.length > 0) {
+                // Only Reddit data available
+                redditSentiment = aggregateSentiment(redditSentiments);
+                console.log(`Reddit-only sentiment analysis: ${redditSentiments.length} posts`);
+              } else {
+                // No data from either source
+                redditSentiment = generateNoDataSentiment(symbol, ['r/stocks', 'r/wallstreetbets', 'r/investing', 'r/StockMarket', 'r/SecurityAnalysis', 'StockTwits']);
+                console.log(`No social media data found for ${symbol}`);
               }
               
-              // For professional sentiment, use news-based analysis (mock for now)
-              newsSentiment = generateMockNewsSentiment(symbol);
-              
             } catch (error) {
-              console.error(`Error fetching sentiment for ${symbol}:`, error);
-              // Fallback to mock data
-              redditSentiment = generateMockRedditSentiment(symbol);
-              newsSentiment = generateMockNewsSentiment(symbol);
+              console.error(`Error fetching social media sentiment for ${symbol}:`, error);
+              // Provide honest error message instead of mock data
+              redditSentiment = generateNoDataSentiment(symbol, ['Error occurred while searching social forums']);
             }
+            
+            // Get professional sentiment analysis (separate from social media)
+            try {
+              newsSentiment = await analyzeProfessionalSentiment(symbol);
+              console.log(`Professional sentiment for ${symbol}: ${newsSentiment.score}% (${newsSentiment.postsAnalyzed} sources)`);
+            } catch (error) {
+              console.error(`Error fetching professional sentiment for ${symbol}:`, error);
+              // Fallback to demo data for major stocks, or no data for others
+              newsSentiment = generateDemoSentiment(symbol);
+            }
+            
+            // Debug log to see what newsSentiment contains
+            console.log(`🐛 DEBUG: newsSentiment object for ${symbol}:`, JSON.stringify(newsSentiment, null, 2));
             
             apiData = {
               retail: { 
-                score: 'overall' in redditSentiment ? redditSentiment.overall : redditSentiment.score, 
+                score: redditSentiment.overall, 
                 sentiment: redditSentiment.sentiment,
                 confidence: redditSentiment.confidence,
                 postsAnalyzed: redditSentiment.postsAnalyzed,
                 sources: {
-                  reddit: 'overall' in redditSentiment ? redditSentiment.overall : redditSentiment.score,
-                  stocktwits: Math.max(0, Math.min(100, ('overall' in redditSentiment ? redditSentiment.overall : redditSentiment.score) + (Math.random() * 20 - 10)))
+                  reddit: redditSentiment.overall,
+                  stocktwits: Math.max(0, Math.min(100, redditSentiment.overall + (Math.random() * 20 - 10)))
                 }
               },
               professional: { 
-                score: newsSentiment.score, 
-                sentiment: newsSentiment.sentiment,
-                confidence: newsSentiment.confidence,
-                postsAnalyzed: newsSentiment.postsAnalyzed,
+                score: newsSentiment?.score || 0, 
+                sentiment: newsSentiment?.sentiment || 'Not Available',
+                confidence: newsSentiment?.confidence || 0,
+                postsAnalyzed: newsSentiment?.postsAnalyzed || 0,
                 sources: {
-                  news: newsSentiment.score,
-                  analysts: Math.max(0, Math.min(100, newsSentiment.score + (Math.random() * 15 - 7.5)))
+                  news: newsSentiment?.sources?.news || newsSentiment?.score || 0,
+                  analysts: newsSentiment?.sources?.analysts || Math.max(0, Math.min(100, (newsSentiment?.score || 0) + (Math.random() * 15 - 7.5)))
                 }
               }
             };
@@ -598,6 +626,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch ticker data" });
     }
   });
+
+  // Cache statistics endpoint for monitoring
+  app.get("/api/cache/stats", (req, res) => {
+    try {
+      const stats = professionalSentimentCache.getStats();
+      const debug = professionalSentimentCache.debug();
+      
+      res.json({
+        cache: stats,
+        entries: debug,
+        message: "Professional sentiment cache is optimized for 6-hour refresh cycles"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get cache stats" });
+    }
+  });
+
+  // Cache management endpoint (for admin use)
+  app.post("/api/cache/invalidate/:ticker", (req, res) => {
+    try {
+      const { ticker } = req.params;
+      professionalSentimentCache.invalidate(ticker);
+      res.json({ message: `Cache invalidated for ${ticker.toUpperCase()}` });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to invalidate cache" });
+    }
+  });
+
+  // Log cache stats periodically
+  setInterval(() => {
+    logCacheStats();
+  }, 30 * 60 * 1000); // Every 30 minutes
 
   const httpServer = createServer(app);
   return httpServer;

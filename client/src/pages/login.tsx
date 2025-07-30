@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, ChartLine } from "lucide-react";
-import { FaGoogle, FaMicrosoft } from "react-icons/fa";
+import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { useLogin, useRegister } from "@/hooks/use-auth";
 import { loginSchema, insertUserSchema, type LoginUser, type InsertUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export default function Login() {
     // Redirect to the OAuth endpoint
     const providerMap: { [key: string]: string } = {
       "Google": "/api/auth/google",
-      "Microsoft": "/api/auth/microsoft"
+      "Facebook": "/api/auth/facebook"
     };
     
     const endpoint = providerMap[provider];
@@ -137,10 +137,10 @@ export default function Login() {
               type="button"
               variant="outline"
               className="w-full bg-slate-800 border-slate-700 text-white hover:bg-slate-750 hover:shadow-lg hover:shadow-white/10 transition-all duration-200 hover:scale-[1.02] active:scale-95"
-              onClick={() => handleSocialLogin("Microsoft")}
+              onClick={() => handleSocialLogin("Facebook")}
             >
-              <FaMicrosoft className="mr-3 h-4 w-4 text-blue-400" />
-              Continue with Microsoft
+              <FaFacebook className="mr-3 h-4 w-4 text-blue-500" />
+              Continue with Facebook
             </Button>
           </div>
 

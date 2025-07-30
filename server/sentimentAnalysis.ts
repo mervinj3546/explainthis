@@ -23,6 +23,7 @@ interface SentimentData {
   sources: { reddit: number; stocktwits: number };
   postsAnalyzed: number;
   insights: string[];
+  noDataFound?: boolean; // Add flag for no data cases
 }
 
 // Enhanced sentiment word lists with weights
@@ -245,4 +246,22 @@ export function generateMockNewsSentiment(ticker: string): SentimentResult {
   else sentiment = "Negative";
   
   return { score, sentiment, confidence: 70 + Math.round(Math.random() * 20), postsAnalyzed: 8 };
+}
+
+export function generateNoDataSentiment(ticker: string, searchedForums: string[]): SentimentData {
+  return {
+    overall: 50,
+    sentiment: 'No Social Interest Detected',
+    confidence: 0,
+    breakdown: { bullish: 0, bearish: 0, neutral: 0 },
+    sources: { reddit: 0, stocktwits: 0 },
+    postsAnalyzed: 0,
+    noDataFound: true,
+    insights: [
+      `No discussions found for ${ticker.toUpperCase()} in major social forums`,
+      `Searched: ${searchedForums.join(', ')}`,
+      'Limited social media activity may indicate low retail interest',
+      'Consider checking institutional sentiment or news coverage instead'
+    ]
+  };
 }

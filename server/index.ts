@@ -2,6 +2,8 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { warmCache } from "./sentimentCache";
+import { analyzeProfessionalSentiment } from "./professionalSentiment";
 
 const app = express();
 app.use(express.json());
@@ -38,7 +40,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+    const server = await registerRoutes(app);
+
+  // Warm the professional sentiment cache with popular stocks
+  // This happens in the background and doesn't block server startup
+  // RSS feeds are free and unlimited, so no API key check needed
+  log("🔄 Warming professional sentiment cache using RSS feeds...");
+  warmCache(analyzeProfessionalSentiment).then(() => {
+    log("✅ Professional sentiment cache warmed successfully");
+  }).catch((error) => {
+    log(`⚠️ Cache warming failed: ${error.message}`);
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

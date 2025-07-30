@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { storage } from './storage';
+import { fetchRSSNews, type RSSNewsItem } from './rssNews';
 
 interface NewsItem {
   headline: string;
@@ -67,28 +68,19 @@ export async function getBasicStockData(req: Request, res: Response) {
       });
     }
 
-    // Calculate date range for news (last 7 days)
-    const toDate = new Date();
-    const fromDate = new Date();
-    fromDate.setDate(toDate.getDate() - 7);
+    // Fetch news data from RSS feeds (Nasdaq, Yahoo Finance)
+    console.log(`📰 Fetching RSS news for ${normalizedTicker}...`);
+    const rssNewsData = await fetchRSSNews(normalizedTicker);
 
-    const from = fromDate.toISOString().split('T')[0];
-    const to = toDate.toISOString().split('T')[0];
+    // Process RSS news data to match expected format
+    const news: NewsItem[] = rssNewsData.slice(0, 10).map((item: RSSNewsItem) => ({
+      headline: item.headline || 'No headline',
+      summary: item.summary || 'No summary available',
+      url: item.url || '',
+      datetime: item.datetime || Date.now() / 1000
+    }));
 
-    // Fetch news data from Finnhub
-    const newsUrl = `https://finnhub.io/api/v1/company-news?symbol=${normalizedTicker}&from=${from}&to=${to}&token=${finnhubToken}`;
-    const newsRes = await fetch(newsUrl);
-    const newsData = await newsRes.json();
-
-    // Process news data
-    const news: NewsItem[] = Array.isArray(newsData) 
-      ? newsData.slice(0, 10).map((item: any) => ({
-          headline: item.headline || 'No headline',
-          summary: item.summary || 'No summary available',
-          url: item.url || '',
-          datetime: item.datetime || Date.now() / 1000
-        }))
-      : [];
+    console.log(`✅ Fetched ${news.length} news articles from RSS for ${normalizedTicker}`);
 
     // Fetch YTD data using cached Polygon API
     let ytdData: YTDData = {

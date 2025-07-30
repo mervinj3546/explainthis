@@ -6,6 +6,7 @@ import {
   tickerData,
   type User, 
   type InsertUser,
+  type OAuthUser,
   type LoginUser,
   type Ticker,
   type InsertTicker,
@@ -21,8 +22,12 @@ import { eq, and, desc, ilike } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByProviderId(provider: string, providerId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createOAuthUser(user: OAuthUser): Promise<User>;
+  linkOAuthProvider(userId: string, oauthData: { provider: string; providerId: string; profilePicture?: string }): Promise<User>;
   validateUser(email: string, password: string): Promise<User | null>;
   
   // Ticker operations
@@ -90,6 +95,10 @@ export class MemStorage implements IStorage {
       password: hashedPassword,
       firstName: "Demo",
       lastName: "User",
+      profilePicture: null,
+      provider: null,
+      providerId: null,
+      emailVerified: null,
       createdAt: new Date(),
     };
     this.users.set(demoId, demoUser);
@@ -121,28 +130,78 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(user => user.email === email);
   }
 
+  async getUserByProviderId(provider: string, providerId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => 
+      user.provider === provider && user.providerId === providerId
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    const hashedPassword = insertUser.password ? await bcrypt.hash(insertUser.password, 10) : null;
     const user: User = {
       ...insertUser,
       id,
       password: hashedPassword,
       firstName: insertUser.firstName || null,
       lastName: insertUser.lastName || null,
+      profilePicture: null,
+      provider: 'local',
+      providerId: null,
+      emailVerified: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
     return user;
   }
 
+  async createOAuthUser(oauthUser: OAuthUser): Promise<User> {
+    const id = randomUUID();
+    const user: User = {
+      id,
+      email: oauthUser.email,
+      password: null, // OAuth users don't have passwords
+      firstName: oauthUser.firstName || null,
+      lastName: oauthUser.lastName || null,
+      profilePicture: oauthUser.profilePicture || null,
+      provider: oauthUser.provider,
+      providerId: oauthUser.providerId,
+      emailVerified: new Date(), // OAuth emails are pre-verified
+      createdAt: new Date(),
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async linkOAuthProvider(userId: string, oauthData: { provider: string; providerId: string; profilePicture?: string }): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    const updatedUser: User = {
+      ...user,
+      provider: oauthData.provider,
+      providerId: oauthData.providerId,
+      profilePicture: oauthData.profilePicture || user.profilePicture,
+      emailVerified: new Date(),
+    };
+    
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
   async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.getUserByEmail(email);
-    if (!user) return null;
+    if (!user || !user.password) return null; // No password means OAuth user
     
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
@@ -388,6 +447,10 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const result = await db
       .select()
@@ -397,21 +460,67 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByProviderId(provider: string, providerId: string): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.provider, provider), eq(users.providerId, providerId)))
+      .limit(1);
+    return result[0];
+  }
+
   async createUser(user: InsertUser): Promise<User> {
-    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const hashedPassword = user.password ? await bcrypt.hash(user.password, 10) : null;
     const [newUser] = await db
       .insert(users)
       .values({
         ...user,
         password: hashedPassword,
+        provider: 'local',
       })
       .returning();
     return newUser;
   }
 
+  async createOAuthUser(oauthUser: OAuthUser): Promise<User> {
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        email: oauthUser.email,
+        firstName: oauthUser.firstName,
+        lastName: oauthUser.lastName,
+        profilePicture: oauthUser.profilePicture,
+        provider: oauthUser.provider,
+        providerId: oauthUser.providerId,
+        emailVerified: new Date(),
+        password: null, // OAuth users don't have passwords
+      })
+      .returning();
+    return newUser;
+  }
+
+  async linkOAuthProvider(userId: string, oauthData: { provider: string; providerId: string; profilePicture?: string }): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        provider: oauthData.provider,
+        providerId: oauthData.providerId,
+        profilePicture: oauthData.profilePicture,
+        emailVerified: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+    
+    return updatedUser;
+  }
+
   async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.getUserByEmail(email);
-    if (!user) return null;
+    if (!user || !user.password) return null; // No password means OAuth user
 
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;

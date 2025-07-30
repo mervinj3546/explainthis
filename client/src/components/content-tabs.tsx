@@ -89,6 +89,34 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <Skeleton className="h-16 w-16 rounded-full mx-auto mb-4 bg-slate-700" />
                   <Skeleton className="h-4 w-32 mx-auto bg-slate-700" />
                 </div>
+              ) : (sentimentData?.data as any)?.retail?.noDataFound ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <div className="text-xl font-semibold text-slate-300 mb-2">
+                      No Social Interest Detected
+                    </div>
+                    <div className="text-sm text-slate-400 mb-4">
+                      No discussions found for {tickerSymbol.toUpperCase()} in major social forums
+                    </div>
+                  </div>
+                  
+                  {/* Insights for no data */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-slate-300">Forums Searched:</h4>
+                    <div className="text-xs text-slate-500 space-y-1">
+                      <div>• r/stocks, r/wallstreetbets, r/investing</div>
+                      <div>• r/StockMarket, r/SecurityAnalysis</div>
+                      <div>• StockTwits social trading platform</div>
+                    </div>
+                    <div className="mt-3 p-3 bg-slate-900 rounded border border-slate-600">
+                      <div className="text-xs text-slate-400">
+                        💡 Limited social media activity may indicate low retail interest. 
+                        Consider checking institutional sentiment or news coverage instead.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="text-center">
@@ -162,6 +190,29 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   <Skeleton className="h-16 w-16 rounded-full mx-auto mb-4 bg-slate-700" />
                   <Skeleton className="h-4 w-32 mx-auto bg-slate-700" />
                 </div>
+              ) : (sentimentData?.data as any)?.professional?.sentiment?.includes('Not Available') || 
+                   (sentimentData?.data as any)?.professional?.sentiment?.includes('Unavailable') ||
+                   (sentimentData?.data as any)?.professional?.score === 0 ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">📰</div>
+                    <div className="text-xl font-semibold text-slate-300 mb-2">
+                      Professional Analysis Coming Soon
+                    </div>
+                    <div className="text-sm text-slate-400 mb-4">
+                      News sentiment and analyst ratings integration in development
+                    </div>
+                    <div className="bg-slate-700/50 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">Future Data Sources:</h4>
+                      <div className="text-xs text-slate-400 space-y-1">
+                        <div>• Financial news sentiment analysis</div>
+                        <div>• Analyst price target aggregation</div>
+                        <div>• Earnings call transcripts</div>
+                        <div>• SEC filing sentiment</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="text-center">
@@ -234,12 +285,17 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               <div className="space-y-3">
                 {(() => {
                   const retailScore = (sentimentData?.data as any)?.retail?.score || 50;
-                  const professionalScore = (sentimentData?.data as any)?.professional?.score || 50;
+                  const professionalScore = (sentimentData?.data as any)?.professional?.score || 0;
+                  const isProfessionalAvailable = !(
+                    (sentimentData?.data as any)?.professional?.sentiment?.includes('Not Available') || 
+                    (sentimentData?.data as any)?.professional?.sentiment?.includes('Unavailable')
+                  );
                   const divergence = Math.abs(retailScore - professionalScore);
                   
                   const insights = [];
                   
-                  if (divergence > 20) {
+                  // Only show sentiment comparisons when professional data is available
+                  if (isProfessionalAvailable && divergence > 20) {
                     if (retailScore > professionalScore) {
                       insights.push({
                         icon: "⚠️",
@@ -253,7 +309,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                         color: "text-blue-400"
                       });
                     }
-                  } else {
+                  } else if (isProfessionalAvailable) {
                     insights.push({
                       icon: "🤝",
                       text: "Retail and professional sentiment are aligned",
