@@ -11,6 +11,7 @@ import { generateMockRedditSentiment, aggregateSentiment, generateNoDataSentimen
 import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalSentimentResult } from './professionalSentiment';
 import { professionalSentimentCache, logCacheStats } from './sentimentCache';
 import { fetchRedditPosts, fetchStockTwitsPosts } from "./redditFetcher";
+import { analyzeSubredditSentiments, type EnhancedSentimentData } from "./subredditSentiment";
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -484,8 +485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
           case 'sentiment':
             console.log(`🚨 ENTERING SENTIMENT CASE for ${symbol}`);
-            // Try to fetch real Reddit and StockTwits data
-            let redditSentiment;
+            // Analyze sentiment by subreddit for detailed breakdown
+            let subredditSentiment: EnhancedSentimentData;
             let newsSentiment: ProfessionalSentimentResult = {
               score: 0,
               sentiment: 'Professional Sentiment Not Available',
@@ -494,72 +495,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               sources: { news: 0, analysts: 0 }
             };
             
-            // Fetch social media sentiment (Reddit/StockTwits)
+            // Fetch social media sentiment with subreddit breakdown
             try {
-              console.log(`Fetching real sentiment data for ${symbol}...`);
-              
-              // Fetch Reddit posts
-              const redditPosts = await fetchRedditPosts(symbol);
-              console.log(`Found ${redditPosts.length} Reddit posts for ${symbol}`);
-              
-              // Fetch StockTwits data
-              const stockTwitsPosts = await fetchStockTwitsPosts(symbol);
-              console.log(`Found ${stockTwitsPosts.length} StockTwits posts for ${symbol}`);
-              
-              // Analyze Reddit sentiment
-              let redditSentiments: Array<{ score: number; confidence: number; source: string }> = [];
-              
-              if (redditPosts.length > 0) {
-                // Analyze each Reddit post individually
-                redditSentiments = redditPosts.map(post => {
-                  const text = `${post.title} ${post.selftext || ''}`;
-                  const analysis = analyzeSentimentAdvanced(text);
-                  return {
-                    score: analysis.score,
-                    confidence: analysis.confidence,
-                    source: 'reddit'
-                  };
-                });
-                console.log(`Reddit sentiment for ${symbol}:`, redditSentiments.length, 'posts analyzed');
-              } else {
-                console.log(`No Reddit posts found for ${symbol}`);
-              }
-              
-              // Analyze StockTwits sentiment
-              if (stockTwitsPosts.length > 0) {
-                const stockTwitsSentiments = stockTwitsPosts.map(post => {
-                  const text = post.body || '';
-                  const analysis = analyzeSentimentAdvanced(text);
-                  return {
-                    score: analysis.score,
-                    confidence: analysis.confidence,
-                    source: 'stocktwits'
-                  };
-                });
-                
-                // Combine Reddit + StockTwits sentiments
-                const allSentiments = [
-                  ...redditSentiments,
-                  ...stockTwitsSentiments
-                ];
-                
-                redditSentiment = aggregateSentiment(allSentiments);
-                redditSentiment.postsAnalyzed = redditPosts.length + stockTwitsPosts.length;
-                console.log(`Combined sentiment analysis: ${redditPosts.length} Reddit + ${stockTwitsPosts.length} StockTwits posts`);
-              } else if (redditSentiments.length > 0) {
-                // Only Reddit data available
-                redditSentiment = aggregateSentiment(redditSentiments);
-                console.log(`Reddit-only sentiment analysis: ${redditSentiments.length} posts`);
-              } else {
-                // No data from either source
-                redditSentiment = generateNoDataSentiment(symbol, ['r/stocks', 'r/wallstreetbets', 'r/investing', 'r/StockMarket', 'r/SecurityAnalysis', 'StockTwits']);
-                console.log(`No social media data found for ${symbol}`);
-              }
-              
+              console.log(`Fetching subreddit sentiment data for ${symbol}...`);
+              subredditSentiment = await analyzeSubredditSentiments(symbol);
+              console.log(`Subreddit sentiment analysis complete: ${subredditSentiment.overall.score}% across ${subredditSentiment.subreddits.length} communities`);
             } catch (error) {
-              console.error(`Error fetching social media sentiment for ${symbol}:`, error);
+              console.error(`Error fetching subreddit sentiment for ${symbol}:`, error);
               // Provide honest error message instead of mock data
-              redditSentiment = generateNoDataSentiment(symbol, ['Error occurred while searching social forums']);
+              subredditSentiment = {
+                overall: {
+                  score: 50,
+                  sentiment: 'Analysis Error',
+                  confidence: 0,
+                  postsAnalyzed: 0
+                },
+                subreddits: [],
+                stocktwits: null,
+                insights: ['Error occurred while searching social forums'],
+                noDataFound: true
+              };
             }
             
             // Get professional sentiment analysis (separate from social media)
@@ -577,14 +532,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             apiData = {
               retail: { 
-                score: redditSentiment.overall, 
-                sentiment: redditSentiment.sentiment,
-                confidence: redditSentiment.confidence,
-                postsAnalyzed: redditSentiment.postsAnalyzed,
+                score: subredditSentiment.overall.score, 
+                sentiment: subredditSentiment.overall.sentiment,
+                confidence: subredditSentiment.overall.confidence,
+                postsAnalyzed: subredditSentiment.overall.postsAnalyzed,
                 sources: {
-                  reddit: redditSentiment.overall,
-                  stocktwits: Math.max(0, Math.min(100, redditSentiment.overall + (Math.random() * 20 - 10)))
-                }
+                  reddit: subredditSentiment.overall.score,
+                  stocktwits: Math.max(0, Math.min(100, subredditSentiment.overall.score + (Math.random() * 20 - 10)))
+                },
+                // Include detailed subreddit breakdown
+                subreddits: subredditSentiment.subreddits,
+                insights: subredditSentiment.insights,
+                noDataFound: subredditSentiment.noDataFound
               },
               professional: { 
                 score: newsSentiment?.score || 0, 

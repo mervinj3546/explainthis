@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Eye, EyeOff, ChartLine } from "lucide-react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { useLogin, useRegister } from "@/hooks/use-auth";
@@ -12,14 +13,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 
-const registerSchemaExtended = insertUserSchema.extend({
-  confirmPassword: loginSchema.shape.password,
-}).refine((data) => data.password === data.confirmPassword, {
+const registerSchemaExtended = z.object({
+  firstName: z.string().min(1, "Please tell us what to call you"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+}).refine((data) => {
+  // If either password field is empty, don't show mismatch error
+  if (!data.password || !data.confirmPassword) {
+    return true;
+  }
+  return data.password === data.confirmPassword;
+}, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
-type RegisterForm = InsertUser & { confirmPassword: string };
+type RegisterForm = { firstName: string; email: string; password: string; confirmPassword: string };
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -40,12 +50,12 @@ export default function Login() {
 
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchemaExtended),
+    mode: "onBlur",
     defaultValues: {
+      firstName: "",
       email: "",
       password: "",
       confirmPassword: "",
-      firstName: "",
-      lastName: "",
     },
   });
 
@@ -66,13 +76,29 @@ export default function Login() {
     try {
       const { confirmPassword, ...registerData } = data;
       await registerMutation.mutateAsync(registerData);
-      setShowSuccess(true);
-      // Quick redirect after success message
+      
+      // Show success toast
+      toast({
+        title: "Account Created Successfully!",
+        description: "Please sign in with your new account",
+        variant: "default",
+      });
+      
+      // Clear the registration form
+      registerForm.reset();
+      
+      // Switch to login form after a brief delay
       setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 800);
+        setIsRegistering(false);
+      }, 500);
+      
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: "There was an error creating your account. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -162,7 +188,7 @@ export default function Login() {
                 variant={!isRegistering ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setIsRegistering(false)}
-                className={!isRegistering ? "bg-green-500 hover:bg-green-600" : "text-slate-400 hover:text-white"}
+                className={!isRegistering ? "bg-blue-600 hover:bg-blue-700" : "text-slate-400 hover:text-white"}
               >
                 Sign In
               </Button>
@@ -171,7 +197,7 @@ export default function Login() {
                 variant={isRegistering ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setIsRegistering(true)}
-                className={isRegistering ? "bg-green-500 hover:bg-green-600" : "text-slate-400 hover:text-white"}
+                className={isRegistering ? "bg-blue-600 hover:bg-blue-700" : "text-slate-400 hover:text-white"}
               >
                 Sign Up
               </Button>
@@ -188,7 +214,7 @@ export default function Login() {
                 <Input
                   {...loginForm.register("email")}
                   type="email"
-                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter your email"
                 />
                 {loginForm.formState.errors.email && (
@@ -204,7 +230,7 @@ export default function Login() {
                   <Input
                     {...loginForm.register("password")}
                     type={showPassword ? "text" : "password"}
-                    className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500 pr-12"
+                    className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500 pr-12"
                     placeholder="Enter your password"
                   />
                   <Button
@@ -229,7 +255,7 @@ export default function Login() {
                     Remember me
                   </Label>
                 </div>
-                <Button type="button" variant="link" className="text-green-500 hover:text-green-400 p-0">
+                <Button type="button" variant="link" className="text-blue-500 hover:text-blue-400 p-0">
                   Forgot your password?
                 </Button>
               </div>
@@ -251,27 +277,18 @@ export default function Login() {
             </form>
           ) : (
             <form className="space-y-6" onSubmit={registerForm.handleSubmit(onRegisterSubmit)}>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-2">
-                    First Name
-                  </Label>
-                  <Input
-                    {...registerForm.register("firstName")}
-                    className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
-                    placeholder="First name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName" className="block text-sm font-medium text-slate-300 mb-2">
-                    Last Name
-                  </Label>
-                  <Input
-                    {...registerForm.register("lastName")}
-                    className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Last name"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-2">
+                  What do we call you
+                </Label>
+                <Input
+                  {...registerForm.register("firstName")}
+                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g. John"
+                />
+                {registerForm.formState.errors.firstName && (
+                  <p className="mt-1 text-sm text-red-500">{registerForm.formState.errors.firstName.message}</p>
+                )}
               </div>
 
               <div>
@@ -281,7 +298,7 @@ export default function Login() {
                 <Input
                   {...registerForm.register("email")}
                   type="email"
-                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter your email"
                 />
                 {registerForm.formState.errors.email && (
@@ -296,7 +313,7 @@ export default function Login() {
                 <Input
                   {...registerForm.register("password")}
                   type={showPassword ? "text" : "password"}
-                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Create a password"
                 />
                 {registerForm.formState.errors.password && (
@@ -311,7 +328,7 @@ export default function Login() {
                 <Input
                   {...registerForm.register("confirmPassword")}
                   type={showPassword ? "text" : "password"}
-                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                  className="bg-slate-800 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Confirm your password"
                 />
                 {registerForm.formState.errors.confirmPassword && (

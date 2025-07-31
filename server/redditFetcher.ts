@@ -25,7 +25,8 @@ export async function fetchRedditPosts(ticker: string): Promise<RedditPost[]> {
     'wallstreetbets', 
     'investing',
     'StockMarket',
-    'SecurityAnalysis'
+    'SecurityAnalysis',
+    'valueinvesting'
   ];
 
   let allPosts: RedditPost[] = [];
