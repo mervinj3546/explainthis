@@ -66,7 +66,7 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
   };
 
   const getChangeColor = (change: number) => {
-    return change >= 0 ? 'text-green-500' : 'text-red-500';
+    return change >= 0 ? 'text-bullish' : 'text-bearish';
   };
 
   const handleTickerSelect = (symbol: string) => {
@@ -74,23 +74,23 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <nav className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 lg:px-8">
+      <nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <div className="h-10 w-10 bg-gradient-to-r from-accent-teal to-accent-blue rounded-lg flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
               <ChartLine className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white">Should I buy this stock</h1>
+            <h1 className="text-xl font-bold text-primary">Should I buy this stock</h1>
           </div>
 
           {/* User Profile */}
           <div className="flex items-center space-x-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
+                <Button variant="ghost" className="h-10 w-10 rounded-full bg-gradient-to-r from-accent-blue to-accent-purple hover:shadow-lg hover:shadow-accent-blue/25 transition-all duration-200">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-transparent text-white">
                       {user ? getInitials(user) : 'U'}
@@ -98,14 +98,14 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-slate-800 border-slate-700" align="end">
-                <DropdownMenuItem className="text-white hover:bg-slate-700">
+              <DropdownMenuContent className="bg-card border-border" align="end">
+                <DropdownMenuItem className="text-secondary hover:bg-muted">
                   <User className="h-4 w-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => logoutMutation.mutate()}
-                  className="text-red-400 hover:bg-slate-700 hover:text-red-300"
+                  className="text-accent-rose hover:bg-muted hover:text-accent-rose"
                 >
                   Logout
                 </DropdownMenuItem>
@@ -119,10 +119,10 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Welcome Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-white mb-4">
+          <h2 className="text-4xl font-bold text-primary mb-4">
             Welcome back, {user?.firstName || 'Investor'}
           </h2>
-          <p className="text-xl text-slate-400">
+          <p className="text-xl text-muted-foreground">
             Search for any stock to get comprehensive analysis and insights
           </p>
         </div>
@@ -138,10 +138,10 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Favorites Section */}
           {watchlist.length > 0 && (
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="card-premium">
               <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <Star className="h-5 w-5 mr-2 text-yellow-500" />
+                <CardTitle className="flex items-center text-primary">
+                  <Star className="h-5 w-5 mr-2 text-accent-amber" />
                   Your Favorites
                 </CardTitle>
               </CardHeader>
@@ -149,20 +149,20 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
                 {watchlist.slice(0, 5).map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3 bg-muted hover:bg-border rounded-lg cursor-pointer transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
                     onClick={() => handleTickerSelect(item.tickerSymbol)}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="text-white font-semibold">
+                      <div className="text-primary font-semibold">
                         {item.tickerSymbol}
                       </div>
-                      <div className="text-slate-200 text-sm">
+                      <div className="text-secondary text-sm">
                         {item.ticker?.name || `${item.tickerSymbol} Inc.`}
                       </div>
                     </div>
                     {item.ticker && (
                       <div className="text-right">
-                        <div className="text-white font-medium">
+                        <div className="text-primary font-medium">
                           {formatPrice(item.ticker.price)}
                         </div>
                         <div className={`text-sm ${getChangeColor(item.ticker.change)}`}>
@@ -178,10 +178,10 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
 
           {/* Recently Searched Section */}
           {searchHistory.length > 0 && (
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="card-premium">
               <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <Clock className="h-5 w-5 mr-2 text-blue-500" />
+                <CardTitle className="flex items-center text-primary">
+                  <Clock className="h-5 w-5 mr-2 text-accent-blue" />
                   Recently Searched
                 </CardTitle>
               </CardHeader>
@@ -189,20 +189,20 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
                 {searchHistory.slice(0, 5).map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3 bg-muted hover:bg-border rounded-lg cursor-pointer transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
                     onClick={() => handleTickerSelect(item.tickerSymbol)}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="text-white font-semibold">
+                      <div className="text-primary font-semibold">
                         {item.tickerSymbol}
                       </div>
-                      <div className="text-slate-200 text-sm">
+                      <div className="text-secondary text-sm">
                         {item.ticker?.name || `${item.tickerSymbol} Inc.`}
                       </div>
                     </div>
                     {item.ticker && (
                       <div className="text-right">
-                        <div className="text-white font-medium">
+                        <div className="text-primary font-medium">
                           {formatPrice(item.ticker.price)}
                         </div>
                         <div className={`text-sm ${getChangeColor(item.ticker.change)}`}>
@@ -219,10 +219,10 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
 
         {/* Popular Tickers Fallback - Show ONLY when no favorites AND no recent searches */}
         {watchlist.length === 0 && searchHistory.length === 0 && (
-          <Card className="bg-slate-800 border-slate-700 mt-8">
+          <Card className="card-premium mt-8">
             <CardHeader>
-              <CardTitle className="flex items-center text-white">
-                <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
+              <CardTitle className="flex items-center text-primary">
+                <TrendingUp className="h-5 w-5 mr-2 text-accent-teal" />
                 Popular Stocks
               </CardTitle>
             </CardHeader>
@@ -231,13 +231,13 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
                 {POPULAR_TICKERS.map((ticker) => (
                   <div
                     key={ticker.symbol}
-                    className="p-4 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors text-center"
+                    className="p-4 bg-muted hover:bg-border rounded-lg cursor-pointer transition-colors text-center shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
                     onClick={() => handleTickerSelect(ticker.symbol)}
                   >
-                    <div className="text-white font-semibold text-lg mb-1">
+                    <div className="text-primary font-semibold text-lg mb-1">
                       {ticker.symbol}
                     </div>
-                    <div className="text-slate-200 text-sm">
+                    <div className="text-secondary text-sm">
                       {ticker.name}
                     </div>
                   </div>
@@ -249,40 +249,40 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-800 border-t border-slate-700 px-6 py-8 mt-auto">
+      <footer className="bg-card border-t border-border px-6 py-8 mt-auto">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-white font-semibold mb-4">Explain This Ticker</h3>
-              <p className="text-slate-500 text-sm">Financial intelligence platform for smart investors.</p>
+              <h3 className="text-primary font-semibold mb-4">Explain This Ticker</h3>
+              <p className="text-muted-foreground text-sm">Financial intelligence platform for smart investors.</p>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Platform</h4>
+              <h4 className="text-primary font-medium mb-3">Platform</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Features</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Pricing</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">API</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Features</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Pricing</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">API</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Company</h4>
+              <h4 className="text-primary font-medium mb-3">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">About</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Blog</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">About</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Blog</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Careers</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Support</h4>
+              <h4 className="text-primary font-medium mb-3">Support</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Help Center</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Contact</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Privacy</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Help Center</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Contact</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-secondary transition-colors">Privacy</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-8 pt-8 text-center">
-            <p className="text-slate-500 text-sm">&copy; 2024 Explain This Ticker. All rights reserved.</p>
+          <div className="border-t border-border mt-8 pt-8 text-center">
+            <p className="text-muted-foreground text-sm">&copy; 2024 Explain This Ticker. All rights reserved.</p>
           </div>
         </div>
       </footer>

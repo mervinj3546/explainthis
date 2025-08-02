@@ -3,56 +3,78 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(222, 84%, 5%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(217, 32%, 17%);
-  --muted-foreground: hsl(215, 20%, 65%);
-  --popover: hsl(222, 84%, 5%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(217, 33%, 17%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(217, 33%, 17%);
-  --input: hsl(217, 33%, 17%);
-  --primary: hsl(142, 76%, 36%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(217, 33%, 17%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(217, 33%, 17%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(142, 76%, 36%);
+  /* Professional Dark Theme Colors */
+  --background: #111418; /* Dark gray background instead of pure black */
+  --foreground: #FFFFFF; /* Pure white for headers */
+  --muted: #161A1E; /* Darker card backgrounds */
+  --muted-foreground: #9CA3AF; /* Gray-400 for muted text */
+  --popover: #161A1E;
+  --popover-foreground: #E5E7EB; /* Off-white for body text */
+  --card: #161A1E; /* Darker card background */
+  --card-foreground: #E5E7EB; /* Off-white for card text */
+  --card-hover: #1B1F24; /* Slightly lighter on hover */
+  --border: #262A30; /* 1px border for card separation */
+  --input: #161A1E;
+  --primary: #2563EB; /* Blue primary CTA button */
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #1E40AF; /* Blue-800 on hover */
+  --secondary: #161A1E;
+  --secondary-foreground: #E5E7EB;
+  --accent: #2563EB; /* Blue accent */
+  --accent-foreground: #FFFFFF;
+  --destructive: #F87171; /* Softer red */
+  --destructive-foreground: #FFFFFF;
+  --ring: #3B82F6; /* Blue-500 focus ring */
   --radius: 0.5rem;
   
   /* Custom colors for the financial app */
-  --bullish: hsl(142, 76%, 36%);
-  --bullish-hover: hsl(142, 76%, 30%);
-  --bearish: hsl(0, 84%, 60%);
-  --neutral: hsl(221, 83%, 53%);
-  --neutral-hover: hsl(221, 83%, 45%);
-  --slate-850: hsl(217, 33%, 17%);
+  --bullish: #34D399; /* Softer green for stock data */
+  --bullish-hover: #10B981; /* Darker green on hover */
+  --bearish: #F87171; /* Softer red for stock data */
+  --neutral: #3B82F6; /* Blue neutral */
+  --neutral-hover: #2563EB; /* Darker blue on hover */
+  --slate-850: #1B1F24;
+  
+  /* Professional accent colors */
+  --accent-blue: #3B82F6;
+  --accent-purple: #8B5CF6;
+  --accent-teal: #14B8A6;
+  --accent-amber: #F59E0B;
+  --accent-rose: #F43F5E;
+  
+  /* Premium CTA colors */
+  --cta-primary: #2563EB; /* Blue primary */
+  --cta-hover: #1E40AF; /* Blue-800 on hover */
+  
+  /* Text hierarchy */
+  --text-primary: #FFFFFF; /* Headers */
+  --text-secondary: #E5E7EB; /* Body text */
+  --text-muted: #9CA3AF; /* Muted text */
 }
 
 .dark {
-  --background: hsl(222, 84%, 5%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(217, 32%, 17%);
-  --muted-foreground: hsl(215, 20%, 65%);
-  --popover: hsl(222, 84%, 5%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(217, 33%, 17%);
-  --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(217, 33%, 17%);
-  --input: hsl(217, 33%, 17%);
-  --primary: hsl(142, 76%, 36%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(217, 33%, 17%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(217, 33%, 17%);
-  --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 84%, 60%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(142, 76%, 36%);
+  /* Same professional color scheme for dark mode */
+  --background: #111418;
+  --foreground: #FFFFFF;
+  --muted: #161A1E;
+  --muted-foreground: #9CA3AF;
+  --popover: #161A1E;
+  --popover-foreground: #E5E7EB;
+  --card: #161A1E;
+  --card-foreground: #E5E7EB;
+  --card-hover: #1B1F24;
+  --border: #262A30;
+  --input: #161A1E;
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #1E40AF;
+  --secondary: #161A1E;
+  --secondary-foreground: #E5E7EB;
+  --accent: #2563EB;
+  --accent-foreground: #FFFFFF;
+  --destructive: #F87171;
+  --destructive-foreground: #FFFFFF;
+  --ring: #3B82F6;
 }
 
 @layer base {
@@ -112,6 +134,62 @@
   background-color: var(--slate-850);
 }
 
+/* Premium text colors */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Professional accent colors */
+.text-accent-blue {
+  color: var(--accent-blue);
+}
+
+.text-accent-purple {
+  color: var(--accent-purple);
+}
+
+.text-accent-teal {
+  color: var(--accent-teal);
+}
+
+.text-accent-amber {
+  color: var(--accent-amber);
+}
+
+.text-accent-rose {
+  color: var(--accent-rose);
+}
+
+/* Icon background colors */
+.bg-accent-blue {
+  background-color: var(--accent-blue);
+}
+
+.bg-accent-purple {
+  background-color: var(--accent-purple);
+}
+
+.bg-accent-teal {
+  background-color: var(--accent-teal);
+}
+
+.bg-accent-amber {
+  background-color: var(--accent-amber);
+}
+
+.bg-accent-rose {
+  background-color: var(--accent-rose);
+}
+
+/* Improved stock data colors */
 .text-bullish {
   color: var(--bullish);
 }
@@ -134,4 +212,55 @@
 
 .border-bullish {
   border-color: var(--bullish);
+}
+
+/* Premium CTA buttons */
+.btn-premium {
+  background-color: var(--cta-primary);
+  color: white;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.btn-premium:hover {
+  background-color: var(--cta-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+.btn-premium:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Secondary buttons */
+.btn-secondary {
+  background-color: transparent;
+  color: white;
+  border: 1px solid var(--ring);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Premium card styling */
+.card-premium {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.card-premium:hover {
+  background-color: var(--card-hover);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
 }

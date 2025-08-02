@@ -16,6 +16,7 @@ export default {
         card: {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
+          hover: "var(--card-hover)",
         },
         popover: {
           DEFAULT: "var(--popover)",
@@ -24,6 +25,7 @@ export default {
         primary: {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
+          hover: "var(--primary-hover)",
         },
         secondary: {
           DEFAULT: "var(--secondary)",
@@ -44,6 +46,18 @@ export default {
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
+        
+        // Professional accent colors
+        "accent-blue": "var(--accent-blue)",
+        "accent-purple": "var(--accent-purple)",
+        "accent-teal": "var(--accent-teal)",
+        "accent-amber": "var(--accent-amber)",
+        "accent-rose": "var(--accent-rose)",
+        
+        // Stock data colors
+        bullish: "var(--bullish)",
+        bearish: "var(--bearish)",
+        
         chart: {
           "1": "var(--chart-1)",
           "2": "var(--chart-2)",
