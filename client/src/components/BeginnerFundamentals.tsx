@@ -243,8 +243,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-card-foreground">Overall Assessment:</span>
+              <div className="flex items-center justify-start">
                 <Badge variant="outline" className={`${assessment.overallColor} border-current`}>
                   {assessment.overall}
                 </Badge>
@@ -256,14 +255,14 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                     <TrendingUp className="h-4 w-4" />
                     Strengths
                   </h4>
-                  <ul className="space-y-1">
+                  <div className="flex flex-wrap gap-2">
                     {assessment.positives.map((positive, index) => (
-                      <li key={index} className="text-card-foreground text-sm flex items-center gap-2">
+                      <div key={index} className="bg-bullish/10 border border-bullish/20 rounded-lg px-3 py-1 text-card-foreground text-sm flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-bullish rounded-full"></div>
                         {positive}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               
@@ -273,14 +272,14 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                     <TrendingDown className="h-4 w-4" />
                     Areas of Concern
                   </h4>
-                  <ul className="space-y-1">
+                  <div className="flex flex-wrap gap-2">
                     {assessment.concerns.map((concern, index) => (
-                      <li key={index} className="text-card-foreground text-sm flex items-center gap-2">
+                      <div key={index} className="bg-bearish/10 border border-bearish/20 rounded-lg px-3 py-1 text-card-foreground text-sm flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-bearish rounded-full"></div>
                         {concern}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
             </div>
