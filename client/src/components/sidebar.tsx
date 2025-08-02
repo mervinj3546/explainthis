@@ -105,18 +105,18 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
   };
 
   return (
-    <div className="w-80 bg-slate-800 min-h-screen border-r border-slate-700 p-6 hidden lg:block">
+    <div className="w-80 bg-sidebar-card min-h-screen border-r border-slate-700 p-6 hidden lg:block">
       <Tabs defaultValue="favorites" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-700 border-slate-600 mb-6">
+        <TabsList className="grid w-full grid-cols-2 bg-transparent border-0 p-0 h-auto gap-1 mb-6">
           <TabsTrigger 
             value="favorites" 
-            className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+            className="flex items-center justify-center px-4 py-3 bg-transparent border-0 text-gray-400 data-[state=active]:text-[#2563EB] data-[state=active]:bg-[#2563EB]/10 data-[state=active]:font-bold hover:text-white transition-all duration-200 rounded-lg relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#2563EB] after:opacity-0 data-[state=active]:after:opacity-100 after:transition-opacity after:duration-200 font-medium text-sm"
           >
             Favorites
           </TabsTrigger>
           <TabsTrigger 
             value="recent" 
-            className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+            className="flex items-center justify-center px-4 py-3 bg-transparent border-0 text-gray-400 data-[state=active]:text-[#2563EB] data-[state=active]:bg-[#2563EB]/10 data-[state=active]:font-bold hover:text-white transition-all duration-200 rounded-lg relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#2563EB] after:opacity-0 data-[state=active]:after:opacity-100 after:transition-opacity after:duration-200 font-medium text-sm"
           >
             Recently Searched
           </TabsTrigger>
@@ -130,8 +130,8 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
               watchlist.map((item) => (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer ${
-                    currentTicker === item.tickerSymbol ? 'bg-slate-600' : 'bg-slate-700'
+                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-[#232831] transition-colors cursor-pointer ${
+                    currentTicker === item.tickerSymbol ? 'bg-[#232831]' : 'bg-[#374151]'
                   }`}
                   onClick={() => onTickerSelect(item.tickerSymbol)}
                 >
@@ -171,8 +171,8 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
               searchHistory.slice(0, 10).map((item) => (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-slate-600 transition-colors cursor-pointer ${
-                    currentTicker === item.tickerSymbol ? 'bg-slate-600' : 'bg-slate-700'
+                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-[#232831] transition-colors cursor-pointer ${
+                    currentTicker === item.tickerSymbol ? 'bg-[#232831]' : 'bg-[#374151]'
                   }`}
                   onClick={() => onTickerSelect(item.tickerSymbol)}
                 >

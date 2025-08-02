@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { FileText, Brain, BarChart3, TrendingUp, Users, MoreHorizontal } from "lucide-react";
 import type { TickerData } from "@shared/schema";
 import { StockPrimaryDetails } from "@/components/stock/StockPrimaryDetails";
 import { TechnicalAnalysisDashboard } from "@/components/TechnicalAnalysisDashboard";
@@ -13,6 +21,137 @@ interface ContentTabsProps {
 }
 
 export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
+  const [activeTab, setActiveTab] = useState("primary");
+  const [visibleTabs, setVisibleTabs] = useState<string[]>([]);
+  const [overflowTabs, setOverflowTabs] = useState<string[]>([]);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Define all tabs with their metadata
+  const allTabs = [
+    { 
+      value: "primary", 
+      label: "PRIMARY DETAILS", 
+      icon: FileText,
+      shortLabel: "PRIMARY"
+    },
+    { 
+      value: "ai", 
+      label: "AI ANALYSIS", 
+      icon: Brain,
+      shortLabel: "AI"
+    },
+    { 
+      value: "fundamentals", 
+      label: "FUNDAMENTALS", 
+      icon: BarChart3,
+      shortLabel: "FUNDS"
+    },
+    { 
+      value: "technical", 
+      label: "TECHNICAL ANALYSIS", 
+      icon: TrendingUp,
+      shortLabel: "TECHNICAL"
+    },
+    { 
+      value: "sentiment", 
+      label: "SENTIMENT ANALYSIS", 
+      icon: Users,
+      shortLabel: "SENTIMENT"
+    }
+  ];
+
+  // Function to calculate which tabs fit in the available space
+  const calculateVisibleTabs = () => {
+    if (!containerRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const overflowButtonWidth = 100; // Width for "More" button
+    const availableWidth = containerWidth - overflowButtonWidth - 20; // Extra margin
+    
+    let currentWidth = 0;
+    const visible: string[] = [];
+    const overflow: string[] = [];
+
+    // Create temporary elements to measure actual tab widths with full labels
+    allTabs.forEach((tab) => {
+      // Create a temporary element to measure the exact width needed
+      const tempElement = document.createElement('div');
+      tempElement.className = 'flex items-center gap-2 px-4 py-3 text-base font-semibold uppercase tracking-wide';
+      tempElement.style.visibility = 'hidden';
+      tempElement.style.position = 'absolute';
+      tempElement.style.whiteSpace = 'nowrap';
+      
+      // Use full label always - no truncation
+      tempElement.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+        </svg>
+        <span>${tab.label}</span>
+      `;
+      
+      document.body.appendChild(tempElement);
+      const tabWidth = tempElement.offsetWidth + 16; // Add some padding buffer
+      document.body.removeChild(tempElement);
+
+      // Check if this tab fits in the remaining space
+      if (currentWidth + tabWidth <= availableWidth) {
+        visible.push(tab.value);
+        currentWidth += tabWidth;
+      } else {
+        overflow.push(tab.value);
+      }
+    });
+
+    // Always show at least one tab, even if it might be tight
+    if (visible.length === 0 && allTabs.length > 0) {
+      visible.push(allTabs[0].value);
+      overflow.splice(0, 1);
+    }
+
+    setVisibleTabs(visible);
+    setOverflowTabs(overflow);
+  };
+
+  // Recalculate on window resize and mount
+  useEffect(() => {
+    // Initial calculation after DOM is rendered
+    const timeoutId = setTimeout(() => {
+      calculateVisibleTabs();
+    }, 300); // Increased delay to ensure proper DOM rendering
+    
+    const handleResize = () => {
+      // Debounced resize calculation
+      clearTimeout(timeoutId);
+      setTimeout(calculateVisibleTabs, 200);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Recalculate when container size changes
+  useEffect(() => {
+    if (containerRef.current) {
+      const resizeObserver = new ResizeObserver(() => {
+        setTimeout(calculateVisibleTabs, 100);
+      });
+      resizeObserver.observe(containerRef.current);
+      return () => resizeObserver.disconnect();
+    }
+  }, []);
+
+  // Force recalculation when visible tabs change to ensure proper rendering
+  useEffect(() => {
+    if (visibleTabs.length === 0) {
+      setTimeout(calculateVisibleTabs, 200);
+    }
+  }, [visibleTabs]);
+
   const { data: newsData, isLoading: newsLoading } = useQuery<TickerData>({
     queryKey: ["/api/ticker-data", tickerSymbol, "news"],
     enabled: !!tickerSymbol,
@@ -34,54 +173,86 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
   });
 
   return (
-    <Tabs defaultValue="primary" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 bg-slate-800 border-slate-700">
-        <TabsTrigger
-          value="primary"
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-        >
-          Primary Details
-        </TabsTrigger>
-        <TabsTrigger
-          value="ai"
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-        >
-          AI Analysis
-        </TabsTrigger>
-        <TabsTrigger
-          value="fundamentals"
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-        >
-          Fundamentals
-        </TabsTrigger>
-        <TabsTrigger
-          value="technical"
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-        >
-          Technical Analysis
-        </TabsTrigger>
-        <TabsTrigger
-          value="sentiment"
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
-        >
-          Sentiment Analysis
-        </TabsTrigger>
-      </TabsList>
+    <div ref={containerRef} className="w-full tab-container">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div ref={tabsRef} className="flex items-center w-full border-b border-[#2A2F36] overflow-hidden">
+          <TabsList className="flex h-auto gap-0 bg-transparent border-0 p-0 flex-shrink-0">
+            {/* Visible tabs */}
+            {visibleTabs.map((tabValue) => {
+              const tab = allTabs.find(t => t.value === tabValue);
+              if (!tab) return null;
+              
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-transparent border-0 text-gray-400 data-[state=active]:text-[#2563EB] data-[state=active]:bg-[#2563EB]/10 data-[state=active]:font-bold hover:text-white transition-all duration-200 rounded-lg relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-[#2563EB] after:opacity-0 data-[state=active]:after:opacity-100 after:transition-opacity after:duration-200 tab-no-truncate"
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-base font-semibold uppercase tracking-wide">
+                    {tab.label}
+                  </span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
 
-      <TabsContent value="primary" className="mt-6">
-        <StockPrimaryDetails tickerSymbol={tickerSymbol} />
-      </TabsContent>
+          {/* Overflow menu */}
+          {overflowTabs.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center gap-2 px-4 py-3 bg-transparent border-0 text-gray-400 hover:text-white transition-colors duration-200 rounded-lg relative tab-no-truncate"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                  <span className="text-base font-semibold uppercase tracking-wide">More</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="bg-[#1E2227] border-[#2A2F36] min-w-[200px]"
+              >
+                {overflowTabs.map((tabValue) => {
+                  const tab = allTabs.find(t => t.value === tabValue);
+                  if (!tab) return null;
+                  
+                  const Icon = tab.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={tab.value}
+                      onClick={() => setActiveTab(tab.value)}
+                      className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#232831] transition-colors ${
+                        activeTab === tab.value ? 'text-[#2563EB] bg-[#232831]' : 'text-[#94A3B8]'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-sm font-medium uppercase tracking-wide">
+                        {tab.label}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
 
-      <TabsContent value="sentiment" className="mt-6">
+        <TabsContent value="primary" className="mt-6">
+          <StockPrimaryDetails tickerSymbol={tickerSymbol} />
+        </TabsContent>
+
+        <TabsContent value="sentiment" className="mt-6">
         {/* Overall Sentiment Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Professional Sentiment - Keep as is */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <span className="text-2xl">🏦</span>
                 Professional Sentiment
-                <span className="text-sm text-slate-400 font-normal">(News, Analysts)</span>
+                <span className="text-sm text-[#94A3B8] font-normal">(News, Analysts)</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -94,17 +265,17 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       </div>
                       <div className="absolute inset-0 w-16 h-16 mx-auto border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
                     </div>
-                    <div className="text-lg font-semibold text-white mb-2">
+                    <div className="text-lg font-semibold text-foreground mb-2">
                       Analyzing Professional Sentiment
                     </div>
-                    <div className="text-sm text-slate-400 mb-4">
+                    <div className="text-sm text-muted-foreground mb-4">
                       Fetching news articles and analyst reports...
                     </div>
                     <div className="space-y-2">
-                      <div className="w-full bg-slate-700 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div className="bg-gradient-to-r from-primary to-accent-teal h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-muted-foreground">
                         Processing financial news and analyst data...
                       </div>
                     </div>
@@ -116,15 +287,15 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className="text-6xl mb-4">�</div>
-                    <div className="text-xl font-semibold text-slate-300 mb-2">
+                    <div className="text-xl font-semibold text-card-foreground mb-2">
                       Professional Analysis Coming Soon
                     </div>
-                    <div className="text-sm text-slate-400 mb-4">
+                    <div className="text-sm text-muted-foreground mb-4">
                       News sentiment and analyst ratings integration in development
                     </div>
-                    <div className="bg-slate-700/50 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-slate-300 mb-2">Future Data Sources:</h4>
-                      <div className="text-xs text-slate-400 space-y-1">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-card-foreground mb-2">Future Data Sources:</h4>
+                      <div className="text-xs text-muted-foreground space-y-1">
                         <div>• Financial news sentiment analysis</div>
                         <div>• Analyst price target aggregation</div>
                         <div>• Earnings call transcripts</div>
@@ -146,10 +317,10 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     >
                       {(sentimentData?.data as any)?.professional?.score || 0}%
                     </div>
-                    <div className="text-slate-400 mb-1">
+                    <div className="text-muted-foreground mb-1">
                       {(sentimentData?.data as any)?.professional?.sentiment || "Neutral"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       Confidence: {(sentimentData?.data as any)?.professional?.confidence || 0}%
                       {(sentimentData?.data as any)?.professional?.postsAnalyzed && (
                         <span className="ml-2">• Last {(sentimentData?.data as any).professional.postsAnalyzed} sources analyzed</span>
@@ -158,7 +329,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   </div>
                   
                   {/* Sentiment Gauge */}
-                  <div className="w-full bg-slate-700 rounded-full h-3 mb-4">
+                  <div className="w-full bg-muted rounded-full h-3 mb-4">
                     <div 
                       className="h-3 rounded-full transition-all duration-500 ease-out"
                       style={{
@@ -173,15 +344,15 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   {/* Source Breakdown */}
                   {(sentimentData?.data as any)?.professional?.sources && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-slate-300">Source Breakdown:</h4>
+                      <h4 className="text-sm font-medium text-card-foreground">Source Breakdown:</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-slate-400">News:</span>
-                          <span className="text-white">{(sentimentData?.data as any).professional.sources.news}%</span>
+                          <span className="text-muted-foreground">News:</span>
+                          <span className="text-foreground">{(sentimentData?.data as any).professional.sources.news}%</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Analysts:</span>
-                          <span className="text-white">{Math.round((sentimentData?.data as any).professional.sources.analysts || 0)}%</span>
+                          <span className="text-muted-foreground">Analysts:</span>
+                          <span className="text-foreground">{Math.round((sentimentData?.data as any).professional.sources.analysts || 0)}%</span>
                         </div>
                       </div>
                     </div>
@@ -192,12 +363,12 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           </Card>
 
           {/* Overall Reddit Sentiment Summary */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <span className="text-2xl">📱</span>
                 Summarized Retail Sentiment
-                <span className="text-sm text-slate-400 font-normal">(Reddit + StockTwits)</span>
+                <span className="text-sm text-[#94A3B8] font-normal">(Reddit + StockTwits)</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -308,35 +479,35 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
         {/* Individual Subreddit Cards */}
         {sentimentLoading ? (
           <div>
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
               <span>🏘️</span>
               Community Breakdown
-              <span className="text-sm text-slate-400 font-normal">
+              <span className="text-sm text-muted-foreground font-normal">
                 (Analyzing communities...)
               </span>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {/* Loading placeholder cards for each subreddit */}
               {['r/WallStreetBets', 'r/investing', 'r/stocks', 'r/StockMarket', 'r/SecurityAnalysis', 'r/ValueInvesting'].map((name, index) => (
-                <Card key={index} className="bg-slate-800 border-slate-700">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-white flex items-center gap-2 text-base">
-                      <Skeleton className="w-6 h-6 rounded bg-slate-600" />
-                      <Skeleton className="w-32 h-4 rounded bg-slate-600" />
+                <Card key={index} className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] min-h-[280px] flex flex-col">
+                  <CardHeader className="pb-3 bg-gradient-to-b from-[#1E2227] to-[#181B20] rounded-t-lg">
+                    <CardTitle className="text-foreground flex items-center gap-2 text-base">
+                      <Skeleton className="w-6 h-6 rounded bg-muted" />
+                      <Skeleton className="w-32 h-4 rounded bg-muted" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="text-center">
-                      <Skeleton className="w-16 h-8 mx-auto mb-2 rounded bg-slate-600" />
-                      <Skeleton className="w-20 h-4 mx-auto mb-1 rounded bg-slate-600" />
-                      <Skeleton className="w-24 h-3 mx-auto rounded bg-slate-600" />
+                      <Skeleton className="w-16 h-8 mx-auto mb-2 rounded bg-muted" />
+                      <Skeleton className="w-20 h-4 mx-auto mb-1 rounded bg-muted" />
+                      <Skeleton className="w-24 h-3 mx-auto rounded bg-muted" />
                     </div>
-                    <Skeleton className="w-full h-2 rounded-full bg-slate-600" />
+                    <Skeleton className="w-full h-2 rounded-full bg-muted" />
                     <div className="space-y-1">
-                      <Skeleton className="w-20 h-3 rounded bg-slate-600" />
+                      <Skeleton className="w-20 h-3 rounded bg-muted" />
                       <div className="flex gap-1">
-                        <Skeleton className="w-16 h-5 rounded bg-slate-600" />
-                        <Skeleton className="w-20 h-5 rounded bg-slate-600" />
+                        <Skeleton className="w-16 h-5 rounded bg-muted" />
+                        <Skeleton className="w-20 h-5 rounded bg-muted" />
                       </div>
                     </div>
                   </CardContent>
@@ -346,14 +517,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
           </div>
         ) : !sentimentLoading && (sentimentData?.data as any)?.retail?.subreddits && (sentimentData?.data as any).retail.subreddits.length > 0 && (
           <div>
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
               <span>🏘️</span>
               Community Breakdown
-              <span className="text-sm text-slate-400 font-normal">
+              <span className="text-sm text-muted-foreground font-normal">
                 ({(sentimentData?.data as any).retail.subreddits.length} communities with mentions)
               </span>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{(sentimentData?.data as any).retail.subreddits.map((subreddit: any, index: number) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">{(sentimentData?.data as any).retail.subreddits.map((subreddit: any, index: number) => {
                 const getSubredditIcon = (name: string) => {
                   switch(name.toLowerCase()) {
                     case 'wallstreetbets': return '🚀';
@@ -366,18 +537,24 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   }
                 };
 
+                const getPlatformIcon = (name: string) => {
+                  // All these are Reddit communities
+                  return '🔴'; // Reddit logo representation
+                };
+
                 const getSentimentColor = (score: number) => {
-                  if (score >= 70) return '#10B981'; // Green
-                  if (score >= 60) return '#34D399'; // Light green
-                  if (score >= 40) return '#F59E0B'; // Yellow
+                  if (score >= 70) return '#34D399'; // Muted emerald-400
+                  if (score >= 60) return '#10B981'; // Emerald-500
+                  if (score >= 40) return '#F59E0B'; // Amber
                   if (score >= 30) return '#FB923C'; // Orange
-                  return '#EF4444'; // Red
+                  return '#F87171'; // Muted rose-400
                 };
 
                 return (
-                  <Card key={index} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-white flex items-center gap-2 text-base">
+                  <Card key={index} className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)] hover:from-[#232831] transition-all min-h-[280px] flex flex-col">
+                    <CardHeader className="pb-3 bg-gradient-to-b from-[#1E2227] to-[#181B20] rounded-t-lg">
+                      <CardTitle className="text-foreground flex items-center gap-2 text-base">
+                        <span className="text-lg">{getPlatformIcon(subreddit.subreddit)}</span>
                         <span className="text-xl">{getSubredditIcon(subreddit.subreddit)}</span>
                         {subreddit.displayName}
                       </CardTitle>
@@ -391,16 +568,16 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                         >
                           {subreddit.score}%
                         </div>
-                        <div className="text-slate-400 text-sm mb-1">
+                        <div className="text-[#94A3B8] text-sm mb-1">
                           {subreddit.sentiment}
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-[#94A3B8]">
                           Last {subreddit.postsAnalyzed} posts analyzed • {subreddit.confidence}% confidence
                         </div>
                       </div>
 
                       {/* Sentiment Bar */}
-                      <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div className="w-full bg-[#1E2227] rounded-full h-2">
                         <div 
                           className="h-2 rounded-full transition-all duration-500 ease-out"
                           style={{
@@ -410,14 +587,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                         ></div>
                       </div>
 
-                      {/* Community Characteristics */}
-                      <div>
-                        <h5 className="text-xs font-medium text-slate-300 mb-2">Community Style:</h5>
+                      {/* Section Divider */}
+                      <div className="border-t border-[#2F343B] pt-3">
+                        <h5 className="text-xs font-medium text-[#E5E7EB] mb-2">Community Style:</h5>
                         <div className="flex flex-wrap gap-1">
                           {subreddit.characteristics.slice(0, 3).map((char: string, charIndex: number) => (
                             <span 
                               key={charIndex}
-                              className="text-xs bg-slate-700/60 text-slate-300 px-2 py-1 rounded"
+                              className="text-xs bg-[#1E2227]/60 text-[#E5E7EB] px-2 py-1 rounded"
                             >
                               {char}
                             </span>
@@ -427,11 +604,11 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
 
                       {/* Top Posts Preview */}
                       {subreddit.posts && subreddit.posts.length > 0 && (
-                        <div>
-                          <h5 className="text-xs font-medium text-slate-300 mb-2">Hot Discussion:</h5>
-                          <div className="text-xs text-slate-400 bg-slate-700/30 p-2 rounded leading-relaxed">
+                        <div className="border-t border-[#2F343B] pt-3">
+                          <h5 className="text-xs font-medium text-[#E5E7EB] mb-2">Hot Discussion:</h5>
+                          <div className="text-xs text-[#94A3B8] bg-[#1E2227]/30 p-2 rounded leading-relaxed">
                             "{subreddit.posts[0].title}"
-                            <div className="text-slate-500 mt-1">
+                            <div className="text-[#94A3B8] mt-1">
                               {subreddit.posts[0].upvotes} upvotes • {subreddit.posts[0].score}% bullish
                             </div>
                           </div>
@@ -445,14 +622,14 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
             
             {/* Show insights about search coverage */}
             {(sentimentData?.data as any)?.retail?.insights && (
-              <div className="mt-6 bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+              <div className="mt-6 bg-card/50 rounded-lg p-4 border border-border">
+                <h4 className="text-sm font-medium text-card-foreground mb-3 flex items-center gap-2">
                   <span>📊</span>
                   Search Coverage
                 </h4>
                 <div className="space-y-2">
                   {(sentimentData?.data as any).retail.insights.map((insight: string, index: number) => (
-                    <div key={index} className="text-xs text-slate-400">
+                    <div key={index} className="text-xs text-muted-foreground">
                       • {insight}
                     </div>
                   ))}
@@ -465,7 +642,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
         {/* StockTwits Card */}
         {!sentimentLoading && (sentimentData?.data as any)?.retail?.stocktwits && (
           <div>
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
               <span>💰</span>
               Retail Trading Platform
             </h3>
@@ -474,17 +651,18 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                 const stocktwits = (sentimentData?.data as any).retail.stocktwits;
                 
                 const getSentimentColor = (score: number) => {
-                  if (score >= 70) return '#10B981'; // Green
-                  if (score >= 60) return '#34D399'; // Light green
-                  if (score >= 40) return '#F59E0B'; // Yellow
+                  if (score >= 70) return '#34D399'; // Muted emerald-400
+                  if (score >= 60) return '#10B981'; // Emerald-500
+                  if (score >= 40) return '#F59E0B'; // Amber
                   if (score >= 30) return '#FB923C'; // Orange
-                  return '#EF4444'; // Red
+                  return '#F87171'; // Muted rose-400
                 };
 
                 return (
-                  <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-white flex items-center gap-2 text-base">
+                  <Card className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)] transition-all min-h-[280px] flex flex-col">
+                    <CardHeader className="pb-3 bg-gradient-to-b from-[#1E2227] to-[#181B20] rounded-t-lg">
+                      <CardTitle className="text-foreground flex items-center gap-2 text-base">
+                        <span className="text-lg">🔵</span>
                         <span className="text-xl">📱</span>
                         {stocktwits.displayName}
                       </CardTitle>
@@ -498,16 +676,16 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                         >
                           {stocktwits.score}%
                         </div>
-                        <div className="text-slate-400 text-sm mb-1">
+                        <div className="text-muted-foreground text-sm mb-1">
                           {stocktwits.sentiment}
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           Last {stocktwits.postsAnalyzed} messages analyzed • {stocktwits.confidence}% confidence
                         </div>
                       </div>
 
                       {/* Sentiment Bar */}
-                      <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-2">
                         <div 
                           className="h-2 rounded-full transition-all duration-500 ease-out"
                           style={{
@@ -519,12 +697,12 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
 
                       {/* Platform Characteristics */}
                       <div>
-                        <h5 className="text-xs font-medium text-slate-300 mb-2">Platform Style:</h5>
+                        <h5 className="text-xs font-medium text-card-foreground mb-2">Platform Style:</h5>
                         <div className="flex flex-wrap gap-1">
                           {stocktwits.characteristics.slice(0, 3).map((char: string, charIndex: number) => (
                             <span 
                               key={charIndex}
-                              className="text-xs bg-blue-900/40 text-blue-300 px-2 py-1 rounded"
+                              className="text-xs bg-primary/20 text-primary px-2 py-1 rounded"
                             >
                               {char}
                             </span>
@@ -535,10 +713,10 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       {/* Top Messages Preview */}
                       {stocktwits.posts && stocktwits.posts.length > 0 && (
                         <div>
-                          <h5 className="text-xs font-medium text-slate-300 mb-2">Recent Buzz:</h5>
-                          <div className="text-xs text-slate-400 bg-slate-700/30 p-2 rounded leading-relaxed">
+                          <h5 className="text-xs font-medium text-card-foreground mb-2">Recent Buzz:</h5>
+                          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded leading-relaxed">
                             "{stocktwits.posts[0].title}"
-                            <div className="text-slate-500 mt-1">
+                            <div className="text-muted-foreground mt-1">
                               {stocktwits.posts[0].score}% bullish sentiment
                             </div>
                           </div>
@@ -554,9 +732,9 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
         
         {/* Sentiment Insights */}
         {!sentimentLoading && (
-          <Card className="bg-gradient-to-r from-slate-800 to-slate-700 border-slate-600 mt-6">
+          <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] mt-6">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <span className="text-xl">🧠</span>
                 Sentiment Insights
               </CardTitle>
@@ -580,20 +758,20 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       insights.push({
                         icon: "⚠️",
                         text: `Retail investors are significantly more bullish than professionals (${divergence.toFixed(0)} point gap)`,
-                        color: "text-yellow-400"
+                        color: "text-accent-amber"
                       });
                     } else {
                       insights.push({
                         icon: "📈",
                         text: `Professionals are more optimistic than retail investors (${divergence.toFixed(0)} point gap)`,
-                        color: "text-blue-400"
+                        color: "text-primary"
                       });
                     }
                   } else if (isProfessionalAvailable) {
                     insights.push({
                       icon: "🤝",
                       text: "Retail and professional sentiment are aligned",
-                      color: "text-green-400"
+                      color: "text-bullish"
                     });
                   }
                   
@@ -601,13 +779,13 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     insights.push({
                       icon: "🚀",
                       text: "Strong retail momentum detected",
-                      color: "text-green-400"
+                      color: "text-bullish"
                     });
                   } else if (retailScore <= 30) {
                     insights.push({
                       icon: "📉",
                       text: "Retail sentiment shows significant bearishness",
-                      color: "text-red-400"
+                      color: "text-bearish"
                     });
                   }
                   
@@ -615,12 +793,12 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                     insights.push({
                       icon: "💼",
                       text: "Professional analysts maintain positive outlook",
-                      color: "text-blue-400"
+                      color: "text-primary"
                     });
                   }
                   
                   return insights.map((insight, index) => (
-                    <div key={index} className="flex items-start gap-3 p-3 bg-slate-700/50 rounded-lg">
+                    <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                       <span className="text-lg">{insight.icon}</span>
                       <span className={`text-sm ${insight.color}`}>{insight.text}</span>
                     </div>
@@ -645,27 +823,27 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
       <TabsContent value="ai" className="mt-6">
         <div className="grid grid-cols-1 gap-6">
           {/* AI Analysis Summary */}
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
+              <CardTitle className="text-foreground flex items-center">
                 <span className="mr-2">🤖</span>
                 AI-Powered Analysis Summary
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 p-4 rounded-lg border border-blue-500/20">
-                  <h4 className="text-blue-400 font-semibold mb-2">Market Outlook</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">
+                <div className="bg-gradient-to-r from-primary/20 to-accent-purple/20 p-4 rounded-lg border border-primary/20">
+                  <h4 className="text-primary font-semibold mb-2">Market Outlook</h4>
+                  <p className="text-card-foreground text-sm leading-relaxed">
                     Based on technical indicators, fundamental analysis, and market sentiment, the AI model suggests a 
-                    <span className="text-green-500 font-medium"> moderately bullish </span> 
+                    <span className="text-bullish font-medium"> moderately bullish </span> 
                     outlook for this ticker. Recent earnings performance and sector trends support continued growth potential.
                   </p>
                 </div>
                 
-                <div className="bg-gradient-to-r from-green-900/30 to-blue-900/30 p-4 rounded-lg border border-green-500/20">
-                  <h4 className="text-green-400 font-semibold mb-2">Key Catalysts Identified</h4>
-                  <ul className="text-slate-300 text-sm space-y-1">
+                <div className="bg-gradient-to-r from-bullish/20 to-primary/20 p-4 rounded-lg border border-bullish/20">
+                  <h4 className="text-bullish font-semibold mb-2">Key Catalysts Identified</h4>
+                  <ul className="text-card-foreground text-sm space-y-1">
                     <li>• Product launch cycle expected to drive Q4 revenue</li>
                     <li>• Market expansion in emerging regions showing momentum</li>
                     <li>• Cost optimization initiatives improving margins</li>
@@ -673,29 +851,29 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   </ul>
                 </div>
                 
-                <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 p-4 rounded-lg border border-yellow-500/20">
-                  <h4 className="text-yellow-400 font-semibold mb-2">Risk Assessment</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">
+                <div className="bg-gradient-to-r from-accent-amber/20 to-accent-rose/20 p-4 rounded-lg border border-accent-amber/20">
+                  <h4 className="text-accent-amber font-semibold mb-2">Risk Assessment</h4>
+                  <p className="text-card-foreground text-sm leading-relaxed">
                     Primary risks include regulatory changes, supply chain disruptions, and increased competition. 
                     However, the company's strong balance sheet and diversified revenue streams provide 
-                    <span className="text-blue-500 font-medium"> solid downside protection</span>.
+                    <span className="text-primary font-medium"> solid downside protection</span>.
                   </p>
                 </div>
                 
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-4 rounded-lg border border-purple-500/20">
-                  <h4 className="text-purple-400 font-semibold mb-2">Price Target & Timeline</h4>
+                <div className="bg-gradient-to-r from-accent-purple/20 to-accent-rose/20 p-4 rounded-lg border border-accent-purple/20">
+                  <h4 className="text-accent-purple font-semibold mb-2">Price Target & Timeline</h4>
                   <div className="grid grid-cols-3 gap-4 mt-3">
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs">3 Month</div>
-                      <div className="text-green-500 font-bold">$205</div>
+                      <div className="text-muted-foreground text-xs">3 Month</div>
+                      <div className="text-bullish font-bold">$205</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs">6 Month</div>
-                      <div className="text-blue-500 font-bold">$218</div>
+                      <div className="text-muted-foreground text-xs">6 Month</div>
+                      <div className="text-primary font-bold">$218</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs">12 Month</div>
-                      <div className="text-purple-500 font-bold">$235</div>
+                      <div className="text-muted-foreground text-xs">12 Month</div>
+                      <div className="text-accent-purple font-bold">$235</div>
                     </div>
                   </div>
                 </div>
@@ -705,5 +883,6 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
         </div>
       </TabsContent>
     </Tabs>
+    </div>
   );
 }

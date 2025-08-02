@@ -21,12 +21,12 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="bg-slate-800 border-slate-700">
+            <Card key={i} className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
               <CardHeader>
-                <Skeleton className="h-6 w-32 bg-slate-700" />
+                <Skeleton className="h-6 w-32 bg-[#2A2F36]" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-80 w-full bg-slate-700" />
+                <Skeleton className="h-80 w-full bg-[#2A2F36]" />
               </CardContent>
             </Card>
           ))}
@@ -50,7 +50,7 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Technical Analysis</h2>
-        <div className="flex items-center text-slate-400">
+        <div className="flex items-center text-[#94A3B8]">
           <BarChart3 className="h-5 w-5 mr-2" />
           <span className="text-sm">Last 6 months of data</span>
         </div>
@@ -84,7 +84,7 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
 
       {/* Technical Indicators Summary */}
       {technicalData && technicalData.rsi && technicalData.rsi.length > 0 && (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           <CardHeader>
             <CardTitle className="text-white">Current Indicators</CardTitle>
           </CardHeader>
@@ -94,31 +94,31 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
                 <div className="text-2xl font-bold text-blue-400">
                   {technicalData.ema8[technicalData.ema8.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
-                <div className="text-sm text-slate-400">EMA 8</div>
+                <div className="text-sm text-[#94A3B8]">EMA 8</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-400">
                   {technicalData.ema21[technicalData.ema21.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
-                <div className="text-sm text-slate-400">EMA 21</div>
+                <div className="text-sm text-[#94A3B8]">EMA 21</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-400">
                   {technicalData.ema34[technicalData.ema34.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
-                <div className="text-sm text-slate-400">EMA 34</div>
+                <div className="text-sm text-[#94A3B8]">EMA 34</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-amber-400">
                   {technicalData.ema50[technicalData.ema50.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
-                <div className="text-sm text-slate-400">EMA 50</div>
+                <div className="text-sm text-[#94A3B8]">EMA 50</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-400">
                   {technicalData.rsi[technicalData.rsi.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
-                <div className="text-sm text-slate-400">RSI</div>
+                <div className="text-sm text-[#94A3B8]">RSI</div>
               </div>
             </div>
           </CardContent>

@@ -353,12 +353,12 @@ const getSignalIcon = (signal: IndicatorSignal) => {
 export function TechnicalRecommendation({ data, ticker }: Props) {
   if (!data || !data.ema8 || data.ema8.length === 0) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
         <CardHeader>
           <CardTitle className="text-white">Technical Recommendation</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-slate-400">Insufficient data for analysis</div>
+          <div className="text-[#94A3B8]">Insufficient data for analysis</div>
         </CardContent>
       </Card>
     );
@@ -371,7 +371,7 @@ export function TechnicalRecommendation({ data, ticker }: Props) {
   const recommendation = calculateRecommendation([emaSignal, macdSignal, rsiSignal]);
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
+    <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
       <CardHeader>
         <CardTitle className="text-white flex items-center justify-between">
           Technical Recommendation for {ticker}
@@ -383,10 +383,10 @@ export function TechnicalRecommendation({ data, ticker }: Props) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Overall Summary */}
-        <div className="p-4 bg-slate-700 rounded-lg">
+        <div className="p-4 bg-gradient-to-b from-[#232831] to-[#1E2227] rounded-lg border border-[#2F343B]">
           <div className="text-white font-medium mb-2">Analysis Summary</div>
-          <div className="text-slate-300 text-sm">{recommendation.summary}</div>
-          <div className="text-slate-400 text-xs mt-2">
+          <div className="text-[#E5E7EB] text-sm">{recommendation.summary}</div>
+          <div className="text-[#94A3B8] text-xs mt-2">
             Confidence: {recommendation.confidence.toFixed(0)}%
           </div>
         </div>
@@ -395,7 +395,7 @@ export function TechnicalRecommendation({ data, ticker }: Props) {
         <div className="space-y-3">
           <h4 className="text-white font-medium">Technical Signals</h4>
           {recommendation.signals.map((signal, index) => (
-            <div key={index} className="flex items-start gap-3 p-3 bg-slate-700 rounded-lg">
+            <div key={index} className="flex items-start gap-3 p-3 bg-gradient-to-b from-[#232831] to-[#1E2227] rounded-lg border border-[#2F343B]">
               <div className="mt-0.5">{getSignalIcon(signal.signal)}</div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -404,7 +404,7 @@ export function TechnicalRecommendation({ data, ticker }: Props) {
                     Strength: {signal.strength}/5
                   </Badge>
                 </div>
-                <div className="text-slate-300 text-sm">{signal.reason}</div>
+                <div className="text-[#E5E7EB] text-sm">{signal.reason}</div>
               </div>
             </div>
           ))}

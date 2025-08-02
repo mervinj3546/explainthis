@@ -39,7 +39,7 @@ export default function Dashboard() {
   };
 
   const getChangeColor = (change: number) => {
-    return change >= 0 ? 'text-green-500' : 'text-red-500';
+    return change >= 0 ? 'text-bullish' : 'text-bearish';
   };
 
   // Show landing page when no ticker is selected
@@ -48,23 +48,23 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <nav className="bg-slate-800 border-b border-slate-700 px-4 sm:px-6 lg:px-8">
+      <nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo and Title */}
           <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+            <div className="h-10 w-10 bg-gradient-to-r from-accent-teal to-primary rounded-lg flex items-center justify-center">
               <ChartLine className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white">Should I buy this stock</h1>
+            <h1 className="text-xl font-bold text-primary">Should I buy this stock</h1>
           </div>
 
           {/* User Profile */}
           <div className="flex items-center space-x-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200">
+                <Button variant="ghost" className="h-10 w-10 rounded-full bg-gradient-to-r from-primary to-accent-purple hover:shadow-lg hover:shadow-primary/25 transition-all duration-200">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-transparent text-white">
                       {user ? getInitials(user) : 'U'}
@@ -72,14 +72,14 @@ export default function Dashboard() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-slate-800 border-slate-700" align="end">
-                <DropdownMenuItem className="text-white hover:bg-slate-700">
+              <DropdownMenuContent className="bg-card border-border" align="end">
+                <DropdownMenuItem className="text-card-foreground hover:bg-card-hover">
                   <User className="h-4 w-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => logoutMutation.mutate()}
-                  className="text-red-400 hover:bg-slate-700 hover:text-red-300"
+                  className="text-destructive hover:bg-card-hover hover:text-destructive"
                 >
                   Logout
                 </DropdownMenuItem>
@@ -90,7 +90,7 @@ export default function Dashboard() {
       </nav>
 
       {/* Centered Search Bar */}
-      <div className="bg-slate-800 border-b border-slate-700 py-4">
+      <div className="bg-card border-b border-border py-4">
         <div className="max-w-lg mx-auto px-4">
           <TickerSearch onTickerSelect={handleTickerSelect} currentTicker={currentTicker} />
         </div>
@@ -105,30 +105,30 @@ export default function Dashboard() {
         <div className="flex-1 p-6">
           {/* Current Ticker Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-3xl font-bold text-white">{currentTicker}</h2>
+            <div className="flex items-center justify-between p-6 bg-gradient-to-b from-[#1E2227] to-[#181B20] border border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] rounded-lg">
+              <div className="flex items-center space-x-6">
+                <h2 className="text-4xl font-bold text-foreground">{currentTicker}</h2>
                 {tickerData && (
-                  <span className="text-xl text-slate-400">{tickerData.name}</span>
+                  <span className="text-xl text-muted-foreground">{tickerData.name}</span>
                 )}
               </div>
               <div className="text-right">
                 {tickerLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-8 bg-slate-700 rounded w-24 mb-2"></div>
-                    <div className="h-4 bg-slate-700 rounded w-20"></div>
+                    <div className="h-10 bg-muted rounded w-32 mb-2"></div>
+                    <div className="h-6 bg-muted rounded w-24"></div>
                   </div>
                 ) : tickerData ? (
                   <>
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-3xl font-bold text-foreground">
                       {formatPrice(tickerData.price)}
                     </div>
-                    <div className={`font-medium ${getChangeColor(tickerData.change)}`}>
+                    <div className={`text-lg font-semibold ${getChangeColor(tickerData.change)}`}>
                       {formatChange(tickerData.change, tickerData.changePercent)}
                     </div>
                   </>
                 ) : (
-                  <div className="text-slate-400">No data available</div>
+                  <div className="text-muted-foreground">No data available</div>
                 )}
               </div>
             </div>
@@ -140,40 +140,40 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-800 border-t border-slate-700 px-6 py-8 mt-auto">
+      <footer className="bg-[#14171C] border-t border-border px-6 py-10 mt-auto">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-white font-semibold mb-4">Explain This Ticker</h3>
-              <p className="text-slate-500 text-sm">Financial intelligence platform for smart investors.</p>
+              <h3 className="text-foreground font-semibold mb-4">Explain This Ticker</h3>
+              <p className="text-muted-foreground text-sm">Financial intelligence platform for smart investors.</p>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Platform</h4>
+              <h4 className="text-foreground font-medium mb-3">Platform</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Features</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Pricing</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">API</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Features</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Pricing</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">API</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Company</h4>
+              <h4 className="text-foreground font-medium mb-3">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">About</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Blog</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Careers</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">About</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Blog</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Careers</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-3">Support</h4>
+              <h4 className="text-foreground font-medium mb-3">Support</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Help Center</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Contact</a></li>
-                <li><a href="#" className="text-slate-500 hover:text-slate-300 transition-colors">Privacy</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Help Center</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Contact</a></li>
+                <li><a href="#" className="text-muted-foreground hover:text-card-foreground transition-colors">Privacy</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-8 pt-8 text-center">
-            <p className="text-slate-500 text-sm">&copy; 2024 Explain This Ticker. All rights reserved.</p>
+          <div className="border-t border-border mt-8 pt-8 text-center">
+            <p className="text-muted-foreground text-sm">&copy; 2024 Explain This Ticker. All rights reserved.</p>
           </div>
         </div>
       </footer>

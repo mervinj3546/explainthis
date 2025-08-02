@@ -53,8 +53,8 @@ interface Props {
 export function MACDChart({ data, ticker }: Props) {
   if (!data || !data.prices || data.prices.length === 0) {
     return (
-      <div className="bg-slate-800 rounded-lg p-6 text-center">
-        <p className="text-slate-400">No data available for MACD chart</p>
+      <div className="bg-gradient-to-b from-[#1E2227] to-[#181B20] rounded-lg p-6 text-center border border-[#2A2F36]">
+        <p className="text-[#94A3B8]">No data available for MACD chart</p>
       </div>
     );
   }
@@ -178,7 +178,7 @@ export function MACDChart({ data, ticker }: Props) {
   };
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6">
+    <div className="bg-gradient-to-b from-[#1E2227] to-[#181B20] rounded-lg p-6 border border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
       <div className="h-80">
         <Chart type="line" data={chartData} options={options} />
       </div>

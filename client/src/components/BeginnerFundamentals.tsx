@@ -49,37 +49,37 @@ const formatLargeNumber = (num: number | string | null): string => {
 
 // Helper function to get color based on value
 const getGrowthColor = (value: number | string | null): string => {
-  if (!value || value === 'N/A') return 'text-slate-400';
+  if (!value || value === 'N/A') return 'text-muted-foreground';
   const n = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(n)) return 'text-slate-400';
-  return n >= 0 ? 'text-green-500' : 'text-red-500';
+  if (isNaN(n)) return 'text-muted-foreground';
+  return n >= 0 ? 'text-bullish' : 'text-bearish';
 };
 
 // Helper function to get ratio assessment
 const getRatioAssessment = (ratio: number | string | null, type: 'pe' | 'current' | 'debt'): { color: string, label: string } => {
-  if (!ratio || ratio === 'N/A') return { color: 'text-slate-400', label: 'Unknown' };
+  if (!ratio || ratio === 'N/A') return { color: 'text-muted-foreground', label: 'Unknown' };
   const n = typeof ratio === 'string' ? parseFloat(ratio) : ratio;
-  if (isNaN(n)) return { color: 'text-slate-400', label: 'Unknown' };
+  if (isNaN(n)) return { color: 'text-muted-foreground', label: 'Unknown' };
   
   switch (type) {
     case 'pe':
-      if (n < 15) return { color: 'text-green-500', label: 'Good Value' };
-      if (n < 25) return { color: 'text-yellow-500', label: 'Fair Value' };
-      return { color: 'text-red-500', label: 'Expensive' };
+      if (n < 15) return { color: 'text-bullish', label: 'Good Value' };
+      if (n < 25) return { color: 'text-accent-amber', label: 'Fair Value' };
+      return { color: 'text-bearish', label: 'Expensive' };
     
     case 'current':
-      if (n >= 2) return { color: 'text-green-500', label: 'Very Strong' };
-      if (n >= 1.5) return { color: 'text-blue-500', label: 'Strong' };
-      if (n >= 1) return { color: 'text-yellow-500', label: 'Adequate' };
-      return { color: 'text-red-500', label: 'Weak' };
+      if (n >= 2) return { color: 'text-bullish', label: 'Very Strong' };
+      if (n >= 1.5) return { color: 'text-primary', label: 'Strong' };
+      if (n >= 1) return { color: 'text-accent-amber', label: 'Adequate' };
+      return { color: 'text-bearish', label: 'Weak' };
     
     case 'debt':
-      if (n <= 0.3) return { color: 'text-green-500', label: 'Low Debt' };
-      if (n <= 0.6) return { color: 'text-yellow-500', label: 'Moderate Debt' };
-      return { color: 'text-red-500', label: 'High Debt' };
+      if (n <= 0.3) return { color: 'text-bullish', label: 'Low Debt' };
+      if (n <= 0.6) return { color: 'text-accent-amber', label: 'Moderate Debt' };
+      return { color: 'text-bearish', label: 'High Debt' };
     
     default:
-      return { color: 'text-slate-400', label: 'Unknown' };
+      return { color: 'text-muted-foreground', label: 'Unknown' };
   }
 };
 
@@ -108,15 +108,15 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="bg-slate-800 border-slate-700">
+          <Card key={i} className="bg-card border-border">
             <CardHeader>
-              <div className="h-6 w-32 bg-slate-700 rounded animate-pulse"></div>
+              <div className="h-6 w-32 bg-muted rounded animate-pulse"></div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="h-4 w-full bg-slate-700 rounded animate-pulse"></div>
-                <div className="h-4 w-3/4 bg-slate-700 rounded animate-pulse"></div>
-                <div className="h-4 w-1/2 bg-slate-700 rounded animate-pulse"></div>
+                <div className="h-4 w-full bg-muted rounded animate-pulse"></div>
+                <div className="h-4 w-3/4 bg-muted rounded animate-pulse"></div>
+                <div className="h-4 w-1/2 bg-muted rounded animate-pulse"></div>
               </div>
             </CardContent>
           </Card>
@@ -129,8 +129,8 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <p className="text-slate-400 mb-2">Unable to load fundamentals data</p>
-          <p className="text-sm text-slate-500">
+          <p className="text-muted-foreground mb-2">Unable to load fundamentals data</p>
+          <p className="text-sm text-muted-foreground">
             {fundamentalsError?.message || error?.message || "Data not available"}
           </p>
         </div>
@@ -229,22 +229,22 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Fundamentals Made Simple</h2>
-          <div className="text-slate-400 text-sm">Perfect for beginners</div>
+          <h2 className="text-2xl font-bold text-foreground">Fundamentals Made Simple</h2>
+          <div className="text-muted-foreground text-sm">Perfect for beginners</div>
         </div>
 
         {/* Summary Card */}
-        <Card className="bg-gradient-to-r from-slate-800 to-slate-700 border-slate-600">
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
               Quick Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-slate-300">Overall Assessment:</span>
+                <span className="text-card-foreground">Overall Assessment:</span>
                 <Badge variant="outline" className={`${assessment.overallColor} border-current`}>
                   {assessment.overall}
                 </Badge>
@@ -252,14 +252,14 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
               
               {assessment.positives.length > 0 && (
                 <div>
-                  <h4 className="text-green-400 font-medium mb-2 flex items-center gap-2">
+                  <h4 className="text-bullish font-medium mb-2 flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
                     Strengths
                   </h4>
                   <ul className="space-y-1">
                     {assessment.positives.map((positive, index) => (
-                      <li key={index} className="text-slate-300 text-sm flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                      <li key={index} className="text-card-foreground text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-bullish rounded-full"></div>
                         {positive}
                       </li>
                     ))}
@@ -269,14 +269,14 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
               
               {assessment.concerns.length > 0 && (
                 <div>
-                  <h4 className="text-red-400 font-medium mb-2 flex items-center gap-2">
+                  <h4 className="text-bearish font-medium mb-2 flex items-center gap-2">
                     <TrendingDown className="h-4 w-4" />
                     Areas of Concern
                   </h4>
                   <ul className="space-y-1">
                     {assessment.concerns.map((concern, index) => (
-                      <li key={index} className="text-slate-300 text-sm flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                      <li key={index} className="text-card-foreground text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-bearish rounded-full"></div>
                         {concern}
                       </li>
                     ))}
@@ -288,10 +288,10 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
         </Card>
 
         {/* Company Overview Card */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
               Company Size & Value
             </CardTitle>
           </CardHeader>
@@ -299,7 +299,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center justify-center gap-1 text-slate-400 text-sm mb-2 cursor-help w-full">
+                  <TooltipTrigger className="flex items-center justify-center gap-1 text-[#94A3B8] text-sm mb-2 cursor-help w-full">
                     Market Cap
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
@@ -307,17 +307,17 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                     <p>The total value of all company shares. Larger = more established.</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-white font-bold text-2xl mb-1">
+                <div className="text-[#E5E7EB] font-bold text-2xl mb-1">
                   {apiData?.keyMetrics?.marketCap || 'N/A'}
                 </div>
-                <div className="text-slate-500 text-xs h-4 flex items-center justify-center">
+                <div className="text-[#94A3B8] text-xs h-4 flex items-center justify-center">
                   Large Cap
                 </div>
               </div>
 
               <div className="text-center">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center justify-center gap-1 text-slate-400 text-sm mb-2 cursor-help w-full">
+                  <TooltipTrigger className="flex items-center justify-center gap-1 text-[#94A3B8] text-sm mb-2 cursor-help w-full">
                     P/E Ratio
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
@@ -336,29 +336,29 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
               </div>
 
               <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">Current Price</div>
-                <div className="text-white font-bold text-2xl mb-1">
+                <div className="text-[#94A3B8] text-sm mb-2">Current Price</div>
+                <div className="text-[#E5E7EB] font-bold text-2xl mb-1">
                   ${fundamentals.currentPrice?.toFixed(2)}
                 </div>
-                <div className="text-slate-500 text-xs">&nbsp;</div>
+                <div className="text-[#94A3B8] text-xs">&nbsp;</div>
               </div>
 
               <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">52-Week Range</div>
-                <div className="text-slate-300 text-lg font-medium mb-1">
+                <div className="text-[#94A3B8] text-sm mb-2">52-Week Range</div>
+                <div className="text-[#E5E7EB] text-lg font-medium mb-1">
                   ${fundamentals.yearLow?.toFixed(2)} - ${fundamentals.yearHigh?.toFixed(2)}
                 </div>
-                <div className="text-slate-500 text-xs">&nbsp;</div>
+                <div className="text-[#94A3B8] text-xs">&nbsp;</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Profitability Card */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-[#34D399]" />
               Is This Company Making Money?
             </CardTitle>
           </CardHeader>
@@ -366,7 +366,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center justify-center gap-1 text-slate-400 text-sm mb-2 cursor-help w-full">
+                  <TooltipTrigger className="flex items-center justify-center gap-1 text-muted-foreground text-sm mb-2 cursor-help w-full">
                     Market Size
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
@@ -374,17 +374,17 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                     <p>Company's market capitalization - total value of all shares</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-white font-bold text-2xl mb-1">
+                <div className="text-foreground font-bold text-2xl mb-1">
                   {apiData?.keyMetrics?.marketCap || 'N/A'}
                 </div>
-                <div className="text-slate-500 text-xs">
+                <div className="text-muted-foreground text-xs">
                   Large Cap
                 </div>
               </div>
 
               <div className="text-center">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center justify-center gap-1 text-slate-400 text-sm mb-2 cursor-help w-full">
+                  <TooltipTrigger className="flex items-center justify-center gap-1 text-muted-foreground text-sm mb-2 cursor-help w-full">
                     Value Rating
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
@@ -395,7 +395,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                 <div className={`font-bold text-2xl mb-1 ${peAssessment.color}`}>
                   {fundamentals.peRatio?.toFixed(1)}
                 </div>
-                <div className="text-slate-500 text-xs">
+                <div className="text-muted-foreground text-xs">
                   <Badge variant="outline" className={`text-xs ${peAssessment.color}`}>
                     {peAssessment.label}
                   </Badge>
@@ -404,7 +404,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
 
               <div className="text-center">
                 <Tooltip>
-                  <TooltipTrigger className="flex items-center justify-center gap-1 text-slate-400 text-sm mb-2 cursor-help w-full">
+                  <TooltipTrigger className="flex items-center justify-center gap-1 text-muted-foreground text-sm mb-2 cursor-help w-full">
                     Return on Equity
                     <Info className="h-3 w-3" />
                   </TooltipTrigger>
@@ -412,10 +412,10 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                     <p>How efficiently they use shareholder money to generate profit</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="text-green-500 font-bold text-2xl mb-1">
+                <div className="text-bullish font-bold text-2xl mb-1">
                   {(apiData?.financialHealth?.roe || 0).toFixed(1)}%
                 </div>
-                <div className="text-slate-500 text-xs">
+                <div className="text-muted-foreground text-xs">
                   {(apiData?.financialHealth?.roe || 0) >= 20 ? 'Excellent' :
                    (apiData?.financialHealth?.roe || 0) >= 15 ? 'Good' :
                    (apiData?.financialHealth?.roe || 0) >= 10 ? 'Fair' : 'Poor'}
@@ -426,72 +426,72 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
         </Card>
 
         {/* Growth Card */}
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
               Is The Company Growing?
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">Revenue Growth</div>
+                <div className="text-[#94A3B8] text-sm mb-2">Revenue Growth</div>
                 <div className={`font-bold text-2xl ${getGrowthColor(fundamentalsData?.growth?.revenueGrowth || 0)}`}>
                   {(fundamentalsData?.growth?.revenueGrowth || 0) >= 0 ? '+' : ''}{(fundamentalsData?.growth?.revenueGrowth || 0).toFixed(1)}%
                 </div>
-                <div className="text-slate-500 text-xs mt-1">Past 12 months</div>
+                <div className="text-[#94A3B8] text-xs mt-1">Past 12 months</div>
               </div>
 
-              <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">Earnings Growth</div>
+              <div className="text-center border-t border-[#2F343B] pt-4 md:border-t-0 md:pt-0">
+                <div className="text-[#94A3B8] text-sm mb-2">Earnings Growth</div>
                 <div className={`font-bold text-2xl ${getGrowthColor(fundamentalsData?.growth?.epsGrowth || 0)}`}>
                   {(fundamentalsData?.growth?.epsGrowth || 0) >= 0 ? '+' : ''}{(fundamentalsData?.growth?.epsGrowth || 0).toFixed(1)}%
                 </div>
-                <div className="text-slate-500 text-xs mt-1">Past 12 months</div>
+                <div className="text-[#94A3B8] text-xs mt-1">Past 12 months</div>
               </div>
 
-              <div className="text-center">
-                <div className="text-slate-400 text-sm mb-2">Stock Performance</div>
+              <div className="text-center border-t border-[#2F343B] pt-4 md:border-t-0 md:pt-0">
+                <div className="text-[#94A3B8] text-sm mb-2">Stock Performance</div>
                 <div className={`font-bold text-2xl ${getGrowthColor(stockData?.ytd?.growthPct || 0)}`}>
                   {(stockData?.ytd?.growthPct || 0) >= 0 ? '+' : ''}{(stockData?.ytd?.growthPct || 0).toFixed(1)}%
                 </div>
-                <div className="text-slate-500 text-xs mt-1">Year to date</div>
+                <div className="text-[#94A3B8] text-xs mt-1">Year to date</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Beginner Tips */}
-        <Card className="bg-slate-700/50 border-slate-600">
+        <Card className="bg-muted/50 border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Info className="h-5 w-5 text-yellow-500" />
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Info className="h-5 w-5 text-accent-amber" />
               Beginner Tips
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-slate-300 text-sm">
+            <div className="space-y-3 text-card-foreground text-sm">
               <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-bullish rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <strong>Look for growing companies:</strong> Positive revenue and earnings growth usually indicates a healthy business.
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <strong>Check financial health:</strong> Companies that can pay their bills (Current Ratio {'>'} 1) and have reasonable debt levels are safer investments.
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-accent-amber rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <strong>Don't rely on one metric:</strong> Look at the complete picture - growth, profitability, and financial health together.
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                <div className="w-2 h-2 bg-accent-purple rounded-full mt-2 flex-shrink-0"></div>
                 <div>
                   <strong>Compare with competitors:</strong> These numbers are more meaningful when compared to similar companies in the same industry.
                 </div>

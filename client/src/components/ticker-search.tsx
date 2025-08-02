@@ -91,7 +91,7 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
         <div className="relative flex-1">
           <Input
             type="text"
-            placeholder="Search ticker (e.g., AAPL)"
+            placeholder="Search for a stock..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -116,7 +116,7 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
               }
               // If hasSearched is true and searchQuery.length > 0, don't show dropdown
             }}
-            className="w-full h-14 pr-14 text-lg bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full h-16 pr-14 px-4 text-lg bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] text-white placeholder-slate-400 focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] transition-all duration-200 rounded-lg"
           />
           <Button
             type="button"
@@ -139,7 +139,7 @@ export function TickerSearch({ onTickerSelect, currentTicker }: TickerSearchProp
         </div>
         <Button
           type="submit"
-          className="h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+          className="h-16 px-8 bg-[#2563EB] hover:bg-[#1E40AF] text-white font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-200 rounded-lg"
           disabled={!searchQuery.trim()}
         >
           Search
