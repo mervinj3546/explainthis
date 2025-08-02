@@ -1,8 +1,105 @@
-import { Link } from "wouter";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ChartLine, TrendingUp, Shield, Zap, BarChart3, Brain, Users, Target, Globe, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChartLine, TrendingUp, Shield, Zap, BarChart3, Brain, Users, Target, Globe, Clock, Search, AlertCircle } from "lucide-react";
+import { ContentTabs } from "@/components/content-tabs";
+
+const FREE_TICKERS = ["TSLA", "NVDA", "AAPL"];
 
 export default function HomePage() {
+  const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicker, setSelectedTicker] = useState<string>("");
+  const [showError, setShowError] = useState(false);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const ticker = searchQuery.toUpperCase().trim();
+    
+    if (!ticker) return;
+
+    if (FREE_TICKERS.includes(ticker)) {
+      setSelectedTicker(ticker);
+      setShowError(false);
+    } else {
+      setShowError(true);
+      setSelectedTicker("");
+    }
+  };
+
+  const handleTickerClick = (ticker: string) => {
+    setSearchQuery(ticker);
+    setSelectedTicker(ticker);
+    setShowError(false);
+  };
+
+  const handleSignUp = () => {
+    setLocation("/login");
+  };
+
+  // If a ticker is selected, show the analysis dashboard
+  if (selectedTicker) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Navigation */}
+        <nav className="bg-card border-b border-border px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-4">
+              <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
+                <ChartLine className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-primary">Should I buy this stock</h1>
+            </div>
+
+            {/* Navigation Items */}
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setSelectedTicker("");
+                  setSearchQuery("");
+                  setShowError(false);
+                }}
+                className="text-muted-foreground hover:text-primary"
+              >
+                ← Back to Try Demo
+              </Button>
+              <Link href="/login">
+                <Button className="btn-premium">
+                  Sign Up for Full Access
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        {/* Ticker Header */}
+        <div className="bg-card border-b border-border py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-primary">{selectedTicker}</h2>
+                <p className="text-muted-foreground">Demo Analysis - Sign up for full access to all tickers</p>
+              </div>
+              <Badge variant="outline" className="text-primary border-primary">
+                Free Trial
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Tabs */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <ContentTabs tickerSymbol={selectedTicker} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -42,28 +139,99 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="relative py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold text-primary mb-8">
-            Make Smarter Investment Decisions
-          </h1>
-          <p className="text-xl text-secondary mb-12 max-w-3xl mx-auto">
-            Get comprehensive stock analysis powered by AI, technical indicators, 
-            and fundamental data to help you decide whether to buy any stock.
+      {/* Interactive Demo Section */}
+      <div className="py-16" style={{ backgroundColor: '#0E1013' }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Is This Stock a Smart Buy Right Now?
+          </h2>
+          <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+            Get a complete view of any stock with AI powered insights, technical indicators, 
+            fundamentals and real time sentiment analysis all in one place.
           </p>
-          <div className="flex justify-center space-x-4">
-            <Link href="/login">
-              <Button size="lg" className="btn-premium px-8 py-3">
-                Get Started Free
-              </Button>
-            </Link>
-            <Link href="/pricing">
-              <Button size="lg" className="btn-secondary px-8 py-3">
-                View Pricing
-              </Button>
-            </Link>
+
+          {/* Main Layout - 16 Column Grid with 3 Sections */}
+          <div className="max-w-6xl mx-auto mb-6">
+            <div className="grid grid-cols-16 items-start">
+              {/* Column 1: Search Bar + Text + Tickers (11/16) */}
+              <div className="col-span-11 space-y-6 mr-[10px]">
+                {/* Search Bar */}
+                <form onSubmit={handleSearch}>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search for a stock..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-3 text-lg bg-gray-800 border-gray-700 text-white placeholder-gray-400 w-full h-[52px]"
+                    />
+                  </div>
+                </form>
+
+                {/* Text centered to search bar */}
+                <div className="text-center">
+                  <p className="text-sm text-gray-400 mb-4">
+                    See it in action and analyze these stocks for free before signing up
+                  </p>
+                  
+                  {/* Free Tickers centered to text */}
+                  <div className="flex justify-center gap-3">
+                    {FREE_TICKERS.map((ticker) => (
+                      <Button
+                        key={ticker}
+                        variant="outline"
+                        onClick={() => handleTickerClick(ticker)}
+                        className="font-semibold bg-gray-800 border-gray-600 text-white hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                      >
+                        {ticker}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Try Now Button (2/16) */}
+              <div className="col-span-2 mr-[10px]">
+                <Button 
+                  onClick={handleSearch} 
+                  variant="ghost"
+                  className="px-8 py-3 text-white hover:bg-gray-800 border border-gray-600 text-sm whitespace-nowrap w-full h-[52px]"
+                >
+                  Try Now
+                </Button>
+              </div>
+
+              {/* Column 3: Sign Up/Login Button (3/16) */}
+              <div className="col-span-3 flex flex-col items-stretch">
+                <Link href="/login" className="w-full">
+                  <Button className="btn-premium px-8 py-3 w-full text-center h-[52px]">
+                    Sign Up Free
+                  </Button>
+                </Link>
+                <p className="text-xs text-gray-500 mt-2 text-center leading-tight">
+                  Sign up to see complete stock insights with no limits.
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Error Message */}
+          {showError && (
+            <Alert className="max-w-md mx-auto mb-6 border-orange-500/50 bg-orange-500/10">
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+              <AlertDescription className="text-orange-300">
+                This ticker requires a premium account. 
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-semibold text-orange-400 hover:text-orange-300"
+                  onClick={handleSignUp}
+                >
+                  Sign up for full access
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </div>
 
