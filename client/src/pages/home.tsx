@@ -150,13 +150,13 @@ export default function HomePage() {
             fundamentals and real time sentiment analysis all in one place.
           </p>
 
-          {/* Main Layout - 16 Column Grid with 3 Sections */}
+          {/* Main Layout - Flexbox with proper proportions */}
           <div className="max-w-6xl mx-auto mb-6">
-            <div className="grid grid-cols-16 items-start">
-              {/* Column 1: Search Bar + Text + Tickers (11/16) */}
-              <div className="col-span-11 space-y-6 mr-[10px]">
+            <div className="flex items-start gap-3">
+              {/* Column 1: Search Bar + Text + Tickers (11/16 = ~68.75%) */}
+              <div className="flex-1" style={{ flex: '11' }}>
                 {/* Search Bar */}
-                <form onSubmit={handleSearch}>
+                <form onSubmit={handleSearch} className="mb-6">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
@@ -170,7 +170,7 @@ export default function HomePage() {
                 </form>
 
                 {/* Text centered to search bar */}
-                <div className="text-center">
+                <div className="text-center mb-4">
                   <p className="text-sm text-gray-400 mb-4">
                     See it in action and analyze these stocks for free before signing up
                   </p>
@@ -191,8 +191,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Column 2: Try Now Button (2/16) */}
-              <div className="col-span-2 mr-[10px]">
+              {/* Column 2: Try Now Button (2/16 = ~12.5%) */}
+              <div className="flex-shrink-0" style={{ flex: '2' }}>
                 <Button 
                   onClick={handleSearch} 
                   variant="ghost"
@@ -202,8 +202,8 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              {/* Column 3: Sign Up/Login Button (3/16) */}
-              <div className="col-span-3 flex flex-col items-stretch">
+              {/* Column 3: Sign Up/Login Button (3/16 = ~18.75%) */}
+              <div className="flex-shrink-0" style={{ flex: '3' }}>
                 <Link href="/login" className="w-full">
                   <Button className="btn-premium px-8 py-3 w-full text-center h-[52px]">
                     Sign Up Free

@@ -25,8 +25,8 @@ class ProfessionalSentimentCache {
     lastCleanup: Date.now()
   };
   
-  // Cache duration: 6 hours (21600000 ms)
-  private readonly CACHE_DURATION = 6 * 60 * 60 * 1000;
+  // Cache duration: 24 hours (86400000 ms) - prevents rate limiting across all users
+  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000;
   // Cleanup interval: 1 hour
   private readonly CLEANUP_INTERVAL = 60 * 60 * 1000;
 

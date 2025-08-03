@@ -667,6 +667,8 @@ export class DbStorage implements IStorage {
         return cacheAge > 12 * 60 * 60 * 1000; // 12 hours for technical indicators
       case 'sentiment':
         return cacheAge > 30 * 60 * 1000; // 30 minutes for sentiment analysis
+      case 'reddit-sentiment':
+        return cacheAge > 36 * 60 * 60 * 1000; // 36 hours for Reddit sentiment analysis
       case 'ytd':
         return cacheAge > 12 * 60 * 60 * 1000; // 12 hours for YTD data
       case 'realtime-price':

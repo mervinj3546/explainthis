@@ -1,6 +1,7 @@
-// Subreddit-specific sentiment analysis with 6-hour caching
+// Subreddit-specific sentiment analysis with 36-hour persistent caching
 import { analyzeSentimentAdvanced } from './sentimentAnalysis';
 import { XMLParser } from 'fast-xml-parser';
+import { storage } from './storage';
 
 export interface SubredditSentiment {
   subreddit: string;
@@ -45,7 +46,10 @@ export interface EnhancedSentimentData {
   noDataFound: boolean;
 }
 
-// Cache for subreddit sentiment data (6 hours)
+// Cache duration for Reddit sentiment data (36 hours)
+const REDDIT_CACHE_DURATION = 36 * 60 * 60 * 1000; // 36 hours in milliseconds
+
+// Legacy in-memory cache for backward compatibility (6 hours)
 const subredditSentimentCache = new Map<string, {
   data: EnhancedSentimentData;
   timestamp: number;
@@ -53,6 +57,50 @@ const subredditSentimentCache = new Map<string, {
 }>();
 
 const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+// Persistent Reddit sentiment cache functions
+async function getCachedRedditSentiment(ticker: string): Promise<EnhancedSentimentData | null> {
+  try {
+    const cachedData = await storage.getTickerData(ticker.toUpperCase(), 'reddit-sentiment');
+    
+    if (cachedData && cachedData.createdAt) {
+      const age = Date.now() - new Date(cachedData.createdAt).getTime();
+      const ageHours = Math.round(age / (1000 * 60 * 60));
+      
+      // Check if cache is still valid (36 hours)
+      if (age < REDDIT_CACHE_DURATION) {
+        console.log(`📊 Reddit sentiment cache HIT for ${ticker} (age: ${ageHours} hours)`);
+        return cachedData.data as EnhancedSentimentData;
+      } else {
+        console.log(`📊 Reddit sentiment cache EXPIRED for ${ticker} (age: ${ageHours} hours)`);
+      }
+    }
+    
+    console.log(`📊 Reddit sentiment cache MISS for ${ticker}`);
+    return null;
+  } catch (error) {
+    console.error(`Error getting cached Reddit sentiment for ${ticker}:`, error);
+    return null;
+  }
+}
+
+async function setCachedRedditSentiment(ticker: string, data: EnhancedSentimentData): Promise<void> {
+  try {
+    await storage.saveTickerData(ticker.toUpperCase(), 'reddit-sentiment', data);
+    console.log(`💾 Cached Reddit sentiment for ${ticker} (expires in 36 hours)`);
+  } catch (error) {
+    console.error(`Error caching Reddit sentiment for ${ticker}:`, error);
+  }
+}
+
+async function isRedditSentimentCacheExpired(ticker: string): Promise<boolean> {
+  try {
+    return await storage.isCacheExpired(ticker.toUpperCase(), 'reddit-sentiment');
+  } catch (error) {
+    console.error(`Error checking Reddit sentiment cache expiry for ${ticker}:`, error);
+    return true; // Assume expired on error
+  }
+}
 
 // Initialize XML parser
 const xmlParser = new XMLParser();
@@ -65,6 +113,195 @@ const redditRssCache = new Map<string, {
 }>();
 
 const RSS_CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours in milliseconds (more aggressive caching)
+
+// Reddit API access token cache (expires every hour)
+let redditAccessToken: { token: string; expiresAt: number } | null = null;
+
+// Get Reddit OAuth2 access token
+async function getRedditAccessToken(): Promise<string | null> {
+  try {
+    // Check if we have a valid cached token
+    if (redditAccessToken && Date.now() < redditAccessToken.expiresAt) {
+      return redditAccessToken.token;
+    }
+
+    console.log(`🔑 Fetching Reddit OAuth2 access token...`);
+    
+    const clientId = process.env.REDDIT_CLIENT_ID; // From your app: Ez1qtxipAZDC2Ps-ZA8HBw
+    const clientSecret = process.env.REDDIT_CLIENT_SECRET; // From your app: A3Eb-6HaKzQE4DKp9vQ4D8QQ5EN7Vw
+    
+    if (!clientId || !clientSecret) {
+      console.log(`❌ Reddit API credentials not found in environment`);
+      return null;
+    }
+
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
+    const tokenResponse = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'ExplainThis-StockAnalysis/1.0 by Creepy-Buy1588'
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    if (!tokenResponse.ok) {
+      console.log(`❌ Failed to get Reddit access token: ${tokenResponse.status}`);
+      return null;
+    }
+
+    const tokenData = await tokenResponse.json();
+    const expiresAt = Date.now() + (tokenData.expires_in * 1000) - 60000; // 1 minute buffer
+    
+    redditAccessToken = {
+      token: tokenData.access_token,
+      expiresAt
+    };
+
+    console.log(`✅ Reddit access token obtained, expires in ${Math.round(tokenData.expires_in / 60)} minutes`);
+    return tokenData.access_token;
+    
+  } catch (error) {
+    console.error(`Error getting Reddit access token:`, error);
+    return null;
+  }
+}
+
+// Official Reddit API search function (respects 100 calls/min rate limit)
+async function fetchRedditPosts(ticker: string): Promise<RedditPost[]> {
+  try {
+    console.log(`🔍 Fetching Reddit posts via official API for "${ticker}"...`);
+    
+    const accessToken = await getRedditAccessToken();
+    if (!accessToken) {
+      console.log(`❌ No Reddit access token available`);
+      return [];
+    }
+
+    // Use official Reddit API search endpoint
+    const searchUrl = `https://oauth.reddit.com/search?q=${encodeURIComponent(ticker)}&limit=10&sort=new&type=link`;
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'ExplainThis-StockAnalysis/1.0 by Creepy-Buy1588'
+      }
+    });
+
+    if (!searchResponse.ok) {
+      console.log(`❌ Failed to fetch Reddit API search for ${ticker}: ${searchResponse.status}`);
+      return [];
+    }
+
+    const searchData = await searchResponse.json();
+    const children = searchData?.data?.children || [];
+    
+    console.log(`📊 Found ${children.length} posts via Reddit API for ${ticker}`);
+    
+    const posts: RedditPost[] = [];
+    for (const child of children.slice(0, 8)) {
+      try {
+        const postData = child.data;
+        if (postData && postData.title) {
+          posts.push({
+            id: postData.id,
+            title: postData.title || '',
+            selftext: postData.selftext || '',
+            ups: postData.ups || 0,
+            permalink: postData.permalink || '',
+            subreddit: postData.subreddit || 'unknown',
+            created_utc: postData.created_utc || 0
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing Reddit API post:`, error);
+      }
+    }
+
+    return posts;
+  } catch (error) {
+    console.error(`Error fetching Reddit API search for ${ticker}:`, error);
+    return [];
+  }
+}
+
+// Subreddit-specific search function for targeted analysis
+async function fetchSubredditPosts(ticker: string, subreddit: string): Promise<RedditPost[]> {
+  try {
+    console.log(`🔍 Fetching Reddit posts from r/${subreddit} for "${ticker}"...`);
+    
+    const accessToken = await getRedditAccessToken();
+    if (!accessToken) {
+      console.log(`❌ No Reddit access token available`);
+      return [];
+    }
+
+    // Search specific subreddit using Reddit API
+    const searchUrl = `https://oauth.reddit.com/r/${subreddit}/search?q=${encodeURIComponent(ticker)}&restrict_sr=on&limit=8&sort=new&type=link`;
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'ExplainThis-StockAnalysis/1.0 by Creepy-Buy1588'
+      }
+    });
+
+    if (!searchResponse.ok) {
+      console.log(`❌ Failed to fetch Reddit API search for r/${subreddit}: ${searchResponse.status}`);
+      return [];
+    }
+
+    const searchData = await searchResponse.json();
+    const children = searchData?.data?.children || [];
+    
+    console.log(`📊 Found ${children.length} posts in r/${subreddit} for ${ticker}`);
+    
+    const posts: RedditPost[] = [];
+    let filteredOutCount = 0;
+    for (const child of children) {
+      try {
+        const postData = child.data;
+        if (postData && postData.title) {
+          const title = postData.title || '';
+          const selftext = postData.selftext || '';
+          
+          // Filter: Only include posts where ticker appears in title (most focused discussions)
+          const titleUpperCase = title.toUpperCase();
+          const tickerUpperCase = ticker.toUpperCase();
+          
+          // Check for ticker in multiple formats: AAPL, $AAPL
+          const hasTickerInTitle = titleUpperCase.includes(tickerUpperCase) || titleUpperCase.includes(`$${tickerUpperCase}`);
+          
+          // Only include if ticker is mentioned in title (highest relevance)
+          if (hasTickerInTitle) {
+            posts.push({
+              id: postData.id,
+              title: title,
+              selftext: selftext,
+              ups: postData.ups || 0,
+              permalink: postData.permalink || '',
+              subreddit: postData.subreddit || 'unknown',
+              created_utc: postData.created_utc || 0
+            });
+          } else {
+            filteredOutCount++;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing Reddit API post from r/${subreddit}:`, error);
+      }
+    }
+
+    if (filteredOutCount > 0) {
+      console.log(`🔍 Filtered out ${filteredOutCount} posts without ticker in title, ${posts.length} title-focused posts remain`);
+    }
+
+    return posts;
+  } catch (error) {
+    console.error(`Error fetching Reddit API search for r/${subreddit}:`, error);
+    return [];
+  }
+}
 
 // Reddit post interface for RSS parsing
 interface RedditPost {
@@ -257,33 +494,39 @@ const SUBREDDIT_CONFIG = {
   }
 };
 
-export async function analyzeSubredditSentiments(ticker: string): Promise<EnhancedSentimentData> {
-  const cacheKey = `${ticker.toUpperCase()}_subreddits`;
-  const cachedData = subredditSentimentCache.get(cacheKey);
-  const now = Date.now();
-
-  // Return cached data if available and not expired
-  if (cachedData && now < cachedData.expiresAt) {
-    const minutesOld = Math.floor((now - cachedData.timestamp) / (1000 * 60));
-    console.log(`📊 Cache HIT for subreddit sentiment ${ticker} (age: ${minutesOld} minutes)`);
-    return cachedData.data;
+export async function analyzeSubredditSentiments(ticker: string, forceRefresh: boolean = false): Promise<EnhancedSentimentData> {
+  console.log(`🔍 Analyzing subreddit sentiments for ${ticker}...`);
+  
+  // Check persistent cache first (36 hours) - skip cache if forceRefresh is true
+  if (!forceRefresh) {
+    const cachedData = await getCachedRedditSentiment(ticker);
+    if (cachedData) {
+      console.log(`✅ Using cached Reddit sentiment for ${ticker}`);
+      return cachedData;
+    }
+  } else {
+    console.log(`🔄 Forcing fresh Reddit sentiment fetch for ${ticker} (refresh requested)`);
   }
 
-  console.log(`🔍 Analyzing subreddit sentiments for ${ticker}...`);
+  // No cache hit or refresh requested, analyze fresh data
+  console.log(`🔍 Fetching fresh Reddit sentiment for ${ticker}...`);
 
-  const subreddits = ['wallstreetbets', 'investing', 'stocks', 'StockMarket', 'SecurityAnalysis', 'ValueInvesting'];
   const results: SubredditSentiment[] = [];
 
-  // Analyze each subreddit using RSS feeds
-  for (const subreddit of subreddits) {
+  // Target 3 specific subreddits for comprehensive coverage
+  const targetSubreddits = ['wallstreetbets', 'investing', 'stocks'];
+  
+  // Search each subreddit individually for better coverage
+  for (let i = 0; i < targetSubreddits.length; i++) {
+    const subreddit = targetSubreddits[i];
+    
     try {
-      console.log(`🔍 Fetching RSS data for r/${subreddit} searching "${ticker}"...`);
+      console.log(`🔍 Searching r/${subreddit} for ${ticker}... (${i + 1}/${targetSubreddits.length})`);
       
-      // Fetch posts using RSS
-      const posts = await fetchRedditRss(subreddit, ticker);
+      const posts = await fetchSubredditPosts(ticker, subreddit);
       
       if (posts.length > 0) {
-        console.log(`✅ Found ${posts.length} posts in r/${subreddit} via RSS`);
+        console.log(`✅ Found ${posts.length} posts in r/${subreddit}`);
         
         // Analyze sentiment for each post
         const sentiments = posts.map((post) => ({
@@ -319,14 +562,23 @@ export async function analyzeSubredditSentiments(ticker: string): Promise<Enhanc
           }))
         });
       } else {
-        console.log(`✅ Found 0 posts in r/${subreddit} via RSS`);
+        console.log(`✅ Found 0 posts in r/${subreddit}`);
       }
 
-      // Rate limiting between subreddits - be very respectful to Reddit
-      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms between subreddit requests
+      // Add 5-second delay between subreddit calls (except after the last one)
+      if (i < targetSubreddits.length - 1) {
+        console.log(`⏱️ Waiting 5 seconds before next subreddit search...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
       
     } catch (error) {
-      console.error(`Error analyzing r/${subreddit} via RSS:`, error);
+      console.error(`Error analyzing r/${subreddit}:`, error);
+      
+      // Still add delay even on error to be respectful
+      if (i < targetSubreddits.length - 1) {
+        console.log(`⏱️ Waiting 5 seconds before next subreddit search...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
   }
 
@@ -406,8 +658,8 @@ export async function analyzeSubredditSentiments(ticker: string): Promise<Enhanc
   const totalPostsAnalyzed = results.reduce((sum, r) => sum + r.postsAnalyzed, 0) + 
                             (stocktwitsData ? stocktwitsData.postsAnalyzed : 0);
 
-  // Generate insights with information about searched communities
-  const searchedSubreddits = ['wallstreetbets', 'investing', 'stocks', 'StockMarket', 'SecurityAnalysis', 'ValueInvesting'];
+  // Generate insights with information about searched communities (reduced to top 3 most active)
+  const searchedSubreddits = ['wallstreetbets', 'investing', 'stocks'];
   const insights = [];
   
   if (results.length === 0 && !stocktwitsData) {
@@ -448,15 +700,9 @@ export async function analyzeSubredditSentiments(ticker: string): Promise<Enhanc
     noDataFound: results.length === 0  // True if no Reddit communities have mentions
   };
 
-  // Cache the results
-  const expiresAt = now + CACHE_DURATION;
-  subredditSentimentCache.set(cacheKey, {
-    data: enhancedData,
-    timestamp: now,
-    expiresAt
-  });
-
-  console.log(`💾 Cached subreddit sentiment for ${ticker} (expires in 6 hours)`);
+  // Cache the results persistently for 36 hours
+  await setCachedRedditSentiment(ticker, enhancedData);
+  
   console.log(`✅ Subreddit sentiment analysis complete for ${ticker}: ${overallScore}% across ${results.length} communities${stocktwitsData ? ' + StockTwits' : ''}`);
 
   return enhancedData;

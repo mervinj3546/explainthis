@@ -10,7 +10,6 @@ import { getTechnicalIndicators } from "./technicalAnalysis";
 import { generateMockRedditSentiment, aggregateSentiment, generateNoDataSentiment, analyzeSentimentAdvanced } from './sentimentAnalysis';
 import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalSentimentResult } from './professionalSentiment';
 import { professionalSentimentCache, logCacheStats } from './sentimentCache';
-import { fetchRedditPosts, fetchStockTwitsPosts } from "./redditFetcher";
 import { analyzeSubredditSentiments, type EnhancedSentimentData } from "./subredditSentiment";
 
 const MemoryStoreSession = MemoryStore(session);
@@ -498,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Fetch social media sentiment with subreddit breakdown
             try {
               console.log(`Fetching subreddit sentiment data for ${symbol}...`);
-              subredditSentiment = await analyzeSubredditSentiments(symbol);
+              subredditSentiment = await analyzeSubredditSentiments(symbol, shouldFetchFresh);
               console.log(`Subreddit sentiment analysis complete: ${subredditSentiment.overall.score}% across ${subredditSentiment.subreddits.length} communities`);
             } catch (error) {
               console.error(`Error fetching subreddit sentiment for ${symbol}:`, error);

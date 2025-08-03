@@ -385,7 +385,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       Analyzing Reddit Communities
                     </div>
                     <div className="text-sm text-slate-400 mb-4">
-                      Searching 6 popular stock communities + StockTwits...
+                      Searching 3 popular stock communities + StockTwits...
                     </div>
                     <div className="space-y-3">
                       <div className="w-full bg-slate-700 rounded-full h-2">
@@ -393,7 +393,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       </div>
                       <div className="text-xs text-slate-500 space-y-1">
                         <div>• Fetching r/wallstreetbets, r/investing, r/stocks...</div>
-                        <div>• Analyzing r/StockMarket, r/SecurityAnalysis, r/ValueInvesting...</div>
+                        <div>• Filtering posts with ticker mentions in titles...</div>
                         <div>• Processing StockTwits sentiment data...</div>
                       </div>
                     </div>
@@ -608,9 +608,6 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                           <h5 className="text-xs font-medium text-[#E5E7EB] mb-2">Hot Discussion:</h5>
                           <div className="text-xs text-[#94A3B8] bg-[#1E2227]/30 p-2 rounded leading-relaxed">
                             "{subreddit.posts[0].title}"
-                            <div className="text-[#94A3B8] mt-1">
-                              {subreddit.posts[0].upvotes} upvotes • {subreddit.posts[0].score}% bullish
-                            </div>
                           </div>
                         </div>
                       )}
