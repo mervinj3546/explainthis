@@ -545,18 +545,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     apiData = {
                       keyMetrics: {
                         peRatio: metrics.peBasicExclExtraTTM || metrics.peTTM || 0,
+                        forwardPE: metrics.forwardPE || 0,
+                        pegRatio: metrics.pegTTM || 0,
                         marketCap: metrics.marketCapitalization ? `${(metrics.marketCapitalization / 1000).toFixed(1)}B` : "N/A",
-                        revenue: metrics.revenuePerShareTTM ? `${(metrics.revenuePerShareTTM * 15.2).toFixed(1)}B` : "N/A" // Approximate shares outstanding
+                        enterpriseValue: metrics.enterpriseValue ? `${(metrics.enterpriseValue / 1000).toFixed(1)}B` : "N/A",
+                        revenue: metrics.revenuePerShareTTM ? `${(metrics.revenuePerShareTTM * 15.2).toFixed(1)}B` : "N/A", // Approximate shares outstanding
+                        bookValuePerShare: metrics.bookValuePerShareQuarterly || metrics.bookValuePerShareAnnual || 0,
+                        cashPerShare: metrics.cashPerSharePerShareQuarterly || metrics.cashPerSharePerShareAnnual || 0,
+                        beta: metrics.beta || 0
+                      },
+                      profitability: {
+                        grossMargin: metrics.grossMarginTTM || metrics.grossMarginAnnual || 0,
+                        operatingMargin: metrics.operatingMarginTTM || metrics.operatingMarginAnnual || 0,
+                        netMargin: metrics.netProfitMarginTTM || metrics.netProfitMarginAnnual || 0,
+                        roe: metrics.roeTTM || metrics.roeRfy || 0,
+                        roa: metrics.roaTTM || metrics.roaRfy || 0,
+                        roi: metrics.roiTTM || metrics.roiAnnual || 0
                       },
                       financialHealth: {
                         debtToEquity: metrics['totalDebt/totalEquityQuarterly'] || metrics['totalDebt/totalEquityAnnual'] || 0,
+                        longTermDebtToEquity: metrics['longTermDebt/equityQuarterly'] || metrics['longTermDebt/equityAnnual'] || 0,
                         currentRatio: metrics.currentRatioQuarterly || metrics.currentRatioAnnual || 0,
-                        roe: metrics.roeTTM || metrics.roeRfy || 0
+                        quickRatio: metrics.quickRatioQuarterly || metrics.quickRatioAnnual || 0,
+                        interestCoverage: metrics.netInterestCoverageTTM || metrics.netInterestCoverageAnnual || 0,
+                        assetTurnover: metrics.assetTurnoverTTM || metrics.assetTurnoverAnnual || 0
                       },
                       growth: {
-                        revenueGrowth: metrics.revenueGrowthTTMYoy || metrics.revenueGrowthQuarterlyYoy || 0,
-                        epsGrowth: metrics.epsGrowthTTMYoy || metrics.epsGrowthQuarterlyYoy || 0,
-                        bookValueGrowth: metrics.bookValueShareGrowth5Y || 0
+                        revenueGrowth: {
+                          ttm: metrics.revenueGrowthTTMYoy || 0,
+                          quarterly: metrics.revenueGrowthQuarterlyYoy || 0,
+                          threeYear: metrics.revenueGrowth3Y || 0,
+                          fiveYear: metrics.revenueGrowth5Y || 0
+                        },
+                        epsGrowth: {
+                          ttm: metrics.epsGrowthTTMYoy || 0,
+                          quarterly: metrics.epsGrowthQuarterlyYoy || 0,
+                          threeYear: metrics.epsGrowth3Y || 0,
+                          fiveYear: metrics.epsGrowth5Y || 0
+                        },
+                        bookValueGrowth: metrics.bookValueShareGrowth5Y || 0,
+                        ebitdaGrowth: metrics.ebitdaCagr5Y || 0
+                      },
+                      valuation: {
+                        priceToBook: metrics.pbQuarterly || metrics.pbAnnual || 0,
+                        priceToSales: metrics.psTTM || metrics.psAnnual || 0,
+                        priceToEarnings: metrics.peTTM || metrics.peAnnual || 0,
+                        priceToFreeCashFlow: metrics.pfcfShareTTM || metrics.pfcfShareAnnual || 0,
+                        evToEbitda: metrics['currentEv/freeCashFlowTTM'] || metrics['currentEv/freeCashFlowAnnual'] || 0
+                      },
+                      dividend: {
+                        dividendYield: metrics.currentDividendYieldTTM || metrics.dividendYieldIndicatedAnnual || 0,
+                        dividendPerShare: metrics.dividendPerShareTTM || metrics.dividendPerShareAnnual || 0,
+                        payoutRatio: metrics.payoutRatioTTM || metrics.payoutRatioAnnual || 0,
+                        dividendGrowth5Y: metrics.dividendGrowthRate5Y || 0
+                      },
+                      performance: {
+                        weekHigh52: metrics['52WeekHigh'] || 0,
+                        weekLow52: metrics['52WeekLow'] || 0,
+                        weekReturn52: metrics['52WeekPriceReturnDaily'] || 0,
+                        weekReturn13: metrics['13WeekPriceReturnDaily'] || 0,
+                        ytdReturn: metrics.yearToDatePriceReturnDaily || 0,
+                        monthToDateReturn: metrics.monthToDatePriceReturnDaily || 0
                       }
                     };
                   }
@@ -571,18 +620,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
               apiData = {
                 keyMetrics: {
                   peRatio: 28.5,
+                  forwardPE: 26.2,
+                  pegRatio: 1.2,
                   marketCap: "2.45T",
-                  revenue: "394.3B"
+                  enterpriseValue: "2.38T",
+                  revenue: "394.3B",
+                  bookValuePerShare: 4.25,
+                  cashPerShare: 3.85,
+                  beta: 1.2
+                },
+                profitability: {
+                  grossMargin: 46.2,
+                  operatingMargin: 31.5,
+                  netMargin: 24.3,
+                  roe: 154.9,
+                  roa: 28.9,
+                  roi: 60.2
                 },
                 financialHealth: {
                   debtToEquity: 0.31,
+                  longTermDebtToEquity: 0.28,
                   currentRatio: 1.07,
-                  roe: 175.4
+                  quickRatio: 0.83,
+                  interestCoverage: 622.5,
+                  assetTurnover: 1.19
                 },
                 growth: {
-                  revenueGrowth: 8.1,
-                  epsGrowth: 11.2,
-                  bookValueGrowth: 5.7
+                  revenueGrowth: {
+                    ttm: 5.97,
+                    quarterly: 9.63,
+                    threeYear: 2.25,
+                    fiveYear: 8.49
+                  },
+                  epsGrowth: {
+                    ttm: 0.16,
+                    quarterly: 12.19,
+                    threeYear: 2.71,
+                    fiveYear: 15.41
+                  },
+                  bookValueGrowth: -5.85,
+                  ebitdaGrowth: 11.9
+                },
+                valuation: {
+                  priceToBook: 46.55,
+                  priceToSales: 7.40,
+                  priceToEarnings: 30.45,
+                  priceToFreeCashFlow: 31.43,
+                  evToEbitda: 32.11
+                },
+                dividend: {
+                  dividendYield: 0.51,
+                  dividendPerShare: 1.02,
+                  payoutRatio: 15.47,
+                  dividendGrowth5Y: 5.3
+                },
+                performance: {
+                  weekHigh52: 260.1,
+                  weekLow52: 169.21,
+                  weekReturn52: -8.87,
+                  weekReturn13: -4.76,
+                  ytdReturn: -19.18,
+                  monthToDateReturn: -2.50
                 }
               };
             }
