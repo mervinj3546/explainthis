@@ -426,13 +426,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Ticker data routes (for financial information)
   app.get("/api/ticker-data/:symbol/:type", async (req: any, res) => {
-    console.log("🔥🔥🔥 THIS IS THE ROUTE HANDLER EXECUTING 🔥🔥🔥");
-    console.log("🔥 ROUTE HANDLER HIT");
     try {
       const { symbol, type } = req.params;
       const { refresh } = req.query;
-      
-      console.log(`Request for ${symbol}/${type}, refresh=${refresh}`);
       
       // Check if user is authenticated
       const isAuthenticated = !!req.session.userId;
@@ -447,6 +443,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiresAuth: true,
           freeTickers: FREE_TICKERS
         });
+      }
+      
+      // For anonymous users accessing free tickers, restrict certain data types
+      if (!isAuthenticated && FREE_TICKERS.includes(symbol.toUpperCase())) {
+        const RESTRICTED_TYPES = ['sentiment', 'ai'];
+        if (RESTRICTED_TYPES.includes(type)) {
+          return res.status(401).json({
+            message: "Sign up required for sentiment and AI analysis",
+            requiresAuth: true,
+            dataType: type
+          });
+        }
       }
       
       // For authenticated users, check and track ticker usage limits
@@ -710,18 +718,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
             
           case 'technical':
-            apiData = {
-              indicators: {
-                rsi: 67.3,
-                macd: "Bullish",
-                movingAvg20: "Above"
-              },
-              volume: {
-                current: 75000000,
-                average: 45000000,
-                volumeRatio: 185
+            // For technical analysis, fetch real data from Polygon API
+            try {
+              console.log(`Fetching technical data for ${symbol} from Polygon API...`);
+              
+              // Import and call the real technical analysis function
+              const { getTechnicalIndicators } = await import('./technicalAnalysis');
+              
+              // Create a mock request/response to call the function
+              const mockReq = { query: { ticker: symbol } };
+              let technicalData = null;
+              
+              const mockRes = {
+                json: (data: any) => { technicalData = data; },
+                status: () => mockRes,
+                sendStatus: () => mockRes
+              };
+              
+              // Call the real technical analysis function
+              await getTechnicalIndicators(mockReq as any, mockRes as any);
+              
+              if (technicalData) {
+                apiData = technicalData;
+              } else {
+                throw new Error('No technical data returned');
               }
-            };
+            } catch (error) {
+              console.error(`Error fetching technical data for ${symbol}:`, error);
+              // Return error response instead of mock data
+              return res.status(500).json({
+                message: "Technical analysis temporarily unavailable",
+                error: "Failed to fetch real-time technical data"
+              });
+            }
             break;
             
           default:
@@ -761,6 +790,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: `Cache invalidated for ${ticker.toUpperCase()}` });
     } catch (error) {
       res.status(500).json({ message: "Failed to invalidate cache" });
+    }
+  });
+
+  // Clear ticker data cache endpoint
+  app.post("/api/cache/clear/:ticker/:dataType", async (req, res) => {
+    try {
+      const { ticker, dataType } = req.params;
+      const cleared = await storage.clearTickerData(ticker.toUpperCase(), dataType);
+      res.json({ 
+        message: `Cache cleared for ${ticker.toUpperCase()}_${dataType}`,
+        success: cleared 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to clear cache" });
     }
   });
 

@@ -10,7 +10,13 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { FileText, Brain, BarChart3, TrendingUp, Users, MoreHorizontal } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FileText, Brain, BarChart3, TrendingUp, Users, MoreHorizontal, Lock } from "lucide-react";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,37 +41,71 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Free tickers that anonymous users can access
+  const FREE_TICKERS = ['NVDA', 'TSLA', 'AAPL'];
+  const isFreeTicker = FREE_TICKERS.includes(tickerSymbol.toUpperCase());
+  
+  // Debug logging
+  console.log('🔍 ContentTabs Debug:', {
+    tickerSymbol,
+    tickerSymbolUpper: tickerSymbol.toUpperCase(),
+    isAuthenticated,
+    isFreeTicker,
+    FREE_TICKERS
+  });
+  
+  // Check if anonymous user can access this ticker at all
+  const canAnonymousAccess = !isAuthenticated && isFreeTicker;
+
+  // Custom setActiveTab that validates access for anonymous users
+  const handleTabChange = (tabValue: string) => {
+    const tab = allTabs.find(t => t.value === tabValue);
+    if (!tab) return;
+    
+    // If anonymous user tries to access locked tab, ignore the change
+    if (!isAuthenticated && tab.requiresAuth && canAnonymousAccess) {
+      return;
+    }
+    
+    setActiveTab(tabValue);
+  };
+
   // Define all tabs with their metadata
   const allTabs = [
     { 
       value: "primary", 
       label: "PRIMARY DETAILS", 
       icon: FileText,
-      shortLabel: "PRIMARY"
+      shortLabel: "PRIMARY",
+      requiresAuth: false
     },
     { 
       value: "ai", 
       label: "AI ANALYSIS", 
       icon: Brain,
-      shortLabel: "AI"
+      shortLabel: "AI",
+      requiresAuth: true
     },
     { 
       value: "fundamentals", 
       label: "FUNDAMENTALS", 
       icon: BarChart3,
-      shortLabel: "FUNDS"
+      shortLabel: "FUNDS",
+      requiresAuth: false
     },
     { 
       value: "technical", 
       label: "TECHNICAL ANALYSIS", 
       icon: TrendingUp,
-      shortLabel: "TECHNICAL"
+      shortLabel: "TECHNICAL",
+      requiresAuth: false
     },
     { 
       value: "sentiment", 
       label: "SENTIMENT ANALYSIS", 
       icon: Users,
-      shortLabel: "SENTIMENT"
+      shortLabel: "SENTIMENT",
+      requiresAuth: true
     }
   ];
 
@@ -198,15 +238,23 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
       const firstError = errors[0] as any;
       const errorMessage = firstError?.message || '';
       
-      if (errorMessage.includes('401') || errorMessage.includes('Authentication required')) {
-        setUpgradePrompt({ show: true, reason: "Sign up required for this ticker", requiresAuth: true });
-      } else if (errorMessage.includes('403') || errorMessage.includes('upgrade')) {
-        setUpgradePrompt({ show: true, reason: "Upgrade required for unlimited ticker access", requiresAuth: false });
+      // For free tickers, only show upgrade prompt for non-sentiment/AI errors
+      // For non-free tickers, any error should show upgrade prompt
+      const shouldShowUpgradePrompt = !isAuthenticated && isFreeTicker 
+        ? (newsError || fundamentalsError || technicalError) // Free tickers: ignore sentiment/AI errors
+        : true; // Non-free tickers: any error triggers upgrade prompt
+
+      if (shouldShowUpgradePrompt) {
+        if (errorMessage.includes('401') || errorMessage.includes('Authentication required')) {
+          setUpgradePrompt({ show: true, reason: "Sign up required for this ticker", requiresAuth: true });
+        } else if (errorMessage.includes('403') || errorMessage.includes('upgrade')) {
+          setUpgradePrompt({ show: true, reason: "Upgrade required for unlimited ticker access", requiresAuth: false });
+        }
       }
     } else {
       setUpgradePrompt(null);
     }
-  }, [newsError, sentimentError, fundamentalsError, technicalError]);
+  }, [newsError, sentimentError, fundamentalsError, technicalError, isAuthenticated, isFreeTicker]);
 
   // Upgrade mutation
   const upgradeMutation = useMutation({
@@ -243,8 +291,27 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
     window.location.href = '/login';
   };
 
+  // Check if anonymous user is trying to access a non-free ticker
+  if (!isAuthenticated && !isFreeTicker) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <UpgradePrompt
+          reason={`${tickerSymbol.toUpperCase()} analysis requires a free account`}
+          remainingLimit={0}
+          onUpgrade={() => {}} // Not used for auth-required prompt
+          onSignUp={handleSignUp}
+          requiresAuth={true}
+        />
+      </div>
+    );
+  }
+
   // Check if any data fetch resulted in an error that should show upgrade prompt
-  const hasAccessError = newsError || sentimentError || fundamentalsError || technicalError;
+  // For free tickers (NVDA, TSLA, AAPL), sentiment/AI errors are expected for anonymous users
+  // Only show upgrade prompt for errors on allowed data types
+  const hasAccessError = !isAuthenticated && isFreeTicker 
+    ? (newsError || fundamentalsError || technicalError) // For free tickers, ignore sentiment/AI errors
+    : (newsError || sentimentError || fundamentalsError || technicalError); // For non-free tickers, any error blocks access
 
   // Show upgrade prompt if there's an access error
   if (upgradePrompt?.show || hasAccessError) {
@@ -264,7 +331,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
 
   return (
     <div ref={containerRef} className="w-full tab-container">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div ref={tabsRef} className="flex items-center w-full border-b border-[#2A2F36] overflow-hidden">
           <TabsList className="flex h-auto gap-0 bg-transparent border-0 p-0 flex-shrink-0">
             {/* Visible tabs */}
@@ -273,6 +340,29 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               if (!tab) return null;
               
               const Icon = tab.icon;
+              const isLocked = !isAuthenticated && tab.requiresAuth && canAnonymousAccess;
+              
+              if (isLocked) {
+                return (
+                  <TooltipProvider key={tab.value}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 bg-transparent border-0 text-gray-600 cursor-not-allowed transition-all duration-200 rounded-lg tab-no-truncate">
+                          <Lock className="h-4 w-4" />
+                          <Icon className="h-5 w-5" />
+                          <span className="text-base font-semibold uppercase tracking-wide">
+                            {tab.label}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sign up to unlock {tab.label.toLowerCase()}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+              
               return (
                 <TabsTrigger
                   key={tab.value}
@@ -309,10 +399,33 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                   if (!tab) return null;
                   
                   const Icon = tab.icon;
+                  const isLocked = !isAuthenticated && tab.requiresAuth && canAnonymousAccess;
+                  
+                  if (isLocked) {
+                    return (
+                      <TooltipProvider key={tab.value}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-2 px-3 py-2 cursor-not-allowed text-gray-600">
+                              <Lock className="h-3 w-3" />
+                              <Icon className="h-4 w-4" />
+                              <span className="text-sm font-medium uppercase tracking-wide">
+                                {tab.label}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Sign up to unlock {tab.label.toLowerCase()}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  }
+                  
                   return (
                     <DropdownMenuItem
                       key={tab.value}
-                      onClick={() => setActiveTab(tab.value)}
+                      onClick={() => handleTabChange(tab.value)}
                       className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#232831] transition-colors ${
                         activeTab === tab.value ? 'text-[#2563EB] bg-[#232831]' : 'text-[#94A3B8]'
                       }`}
