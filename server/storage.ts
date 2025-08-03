@@ -84,6 +84,7 @@ export class MemStorage implements IStorage {
     // Seed with some sample tickers and demo user
     this.seedTickers();
     this.seedDemoUser();
+    this.seedPremiumUser();
     this.seedAdminUser();
   }
 
@@ -154,6 +155,28 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.users.set(adminId, adminUser);
+  }
+
+  private async seedPremiumUser() {
+    // Create premium test user: premium@example.com / premium123
+    const premiumId = "premium-user-id";
+    const hashedPassword = await bcrypt.hash("premium123", 10);
+    const premiumUser: User = {
+      id: premiumId,
+      email: "premium@example.com",
+      password: hashedPassword,
+      firstName: "Premium",
+      lastName: "User",
+      profilePicture: null,
+      provider: null,
+      providerId: null,
+      emailVerified: new Date(), // Premium user is verified
+      tier: "premium", // Premium tier with daily resets
+      tickersUsed: 0,
+      usageResetDate: new Date().toISOString().split('T')[0], // Today's date
+      createdAt: new Date(),
+    };
+    this.users.set(premiumId, premiumUser);
   }
 
   private clearDemoUserData(demoUserId: string) {
@@ -587,6 +610,7 @@ export class DbStorage implements IStorage {
   constructor() {
     // Initialize with demo data
     this.seedDatabase();
+    this.seedPremiumUser();
     this.seedAdminUser();
   }
 
@@ -719,6 +743,38 @@ export class DbStorage implements IStorage {
       }
     } catch (error) {
       console.error('Error seeding admin user:', error);
+    }
+  }
+
+  private async seedPremiumUser() {
+    try {
+      // Check if premium user already exists
+      const existingPremium = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, "premium@example.com"))
+        .limit(1);
+
+      if (existingPremium.length === 0) {
+        // Create premium user
+        const hashedPassword = await bcrypt.hash("premium123", 10);
+        await db
+          .insert(users)
+          .values({
+            email: "premium@example.com",
+            password: hashedPassword,
+            firstName: "Premium",
+            lastName: "User",
+            provider: "local",
+            emailVerified: new Date(), // Premium user is verified
+            tier: "premium", // Premium tier with daily resets
+            tickersUsed: 0,
+            usageResetDate: new Date().toISOString().split('T')[0], // Today's date
+          });
+        console.log('✅ Premium user created successfully');
+      }
+    } catch (error) {
+      console.error('Error seeding premium user:', error);
     }
   }
 
