@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FileText, Brain, BarChart3, TrendingUp, Users, MoreHorizontal, Lock } from "lucide-react";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { AIAnalysis } from "@/components/AIAnalysis";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import type { TickerData } from "@shared/schema";
@@ -1021,66 +1022,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
 
 
       <TabsContent value="ai" className="mt-6">
-        <div className="grid grid-cols-1 gap-6">
-          {/* AI Analysis Summary */}
-          <Card className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center">
-                <span className="mr-2">🤖</span>
-                AI-Powered Analysis Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-primary/20 to-accent-purple/20 p-4 rounded-lg border border-primary/20">
-                  <h4 className="text-primary font-semibold mb-2">Market Outlook</h4>
-                  <p className="text-card-foreground text-sm leading-relaxed">
-                    Based on technical indicators, fundamental analysis, and market sentiment, the AI model suggests a 
-                    <span className="text-bullish font-medium"> moderately bullish </span> 
-                    outlook for this ticker. Recent earnings performance and sector trends support continued growth potential.
-                  </p>
-                </div>
-                
-                <div className="bg-gradient-to-r from-bullish/20 to-primary/20 p-4 rounded-lg border border-bullish/20">
-                  <h4 className="text-bullish font-semibold mb-2">Key Catalysts Identified</h4>
-                  <ul className="text-card-foreground text-sm space-y-1">
-                    <li>• Product launch cycle expected to drive Q4 revenue</li>
-                    <li>• Market expansion in emerging regions showing momentum</li>
-                    <li>• Cost optimization initiatives improving margins</li>
-                    <li>• Strategic partnerships enhancing competitive position</li>
-                  </ul>
-                </div>
-                
-                <div className="bg-gradient-to-r from-accent-amber/20 to-accent-rose/20 p-4 rounded-lg border border-accent-amber/20">
-                  <h4 className="text-accent-amber font-semibold mb-2">Risk Assessment</h4>
-                  <p className="text-card-foreground text-sm leading-relaxed">
-                    Primary risks include regulatory changes, supply chain disruptions, and increased competition. 
-                    However, the company's strong balance sheet and diversified revenue streams provide 
-                    <span className="text-primary font-medium"> solid downside protection</span>.
-                  </p>
-                </div>
-                
-                <div className="bg-gradient-to-r from-accent-purple/20 to-accent-rose/20 p-4 rounded-lg border border-accent-purple/20">
-                  <h4 className="text-accent-purple font-semibold mb-2">Price Target & Timeline</h4>
-                  <div className="grid grid-cols-3 gap-4 mt-3">
-                    <div className="text-center">
-                      <div className="text-muted-foreground text-xs">3 Month</div>
-                      <div className="text-bullish font-bold">$205</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-muted-foreground text-xs">6 Month</div>
-                      <div className="text-primary font-bold">$218</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-muted-foreground text-xs">12 Month</div>
-                      <div className="text-accent-purple font-bold">$235</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <AIAnalysis ticker={tickerSymbol} />
       </TabsContent>
     </Tabs>
     </div>

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sidebar } from "@/components/sidebar";
 import { TickerSearch } from "@/components/ticker-search";
 import { ContentTabs } from "@/components/content-tabs";
+import { OverallSummaryBadge } from "@/components/OverallSummaryBadge";
 import LandingPage from "@/pages/landing";
 import type { Ticker } from "@shared/schema";
 
@@ -110,6 +111,9 @@ export default function Dashboard() {
                 <h2 className="text-4xl font-bold text-foreground">{currentTicker}</h2>
                 {tickerData && (
                   <span className="text-xl text-muted-foreground">{tickerData.name}</span>
+                )}
+                {currentTicker && (
+                  <OverallSummaryBadge ticker={currentTicker} />
                 )}
               </div>
               <div className="text-right">

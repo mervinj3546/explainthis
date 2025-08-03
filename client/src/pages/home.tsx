@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChartLine, TrendingUp, Shield, Zap, BarChart3, Brain, Users, Target, Globe, Clock, Search, AlertCircle } from "lucide-react";
 import { ContentTabs } from "@/components/content-tabs";
+import { OverallSummaryBadge } from "@/components/OverallSummaryBadge";
 
 const FREE_TICKERS = ["TSLA", "NVDA", "AAPL"];
 
@@ -81,9 +82,11 @@ export default function HomePage() {
         <div className="bg-card border-b border-border py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex items-center space-x-4">
                 <h2 className="text-2xl font-bold text-primary">{selectedTicker}</h2>
-                <p className="text-muted-foreground">Demo Analysis - Sign up for full access to all tickers</p>
+                {selectedTicker && (
+                  <OverallSummaryBadge ticker={selectedTicker} />
+                )}
               </div>
               <Badge variant="outline" className="text-primary border-primary">
                 Free Trial

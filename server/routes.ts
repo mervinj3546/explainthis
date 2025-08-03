@@ -11,6 +11,7 @@ import { generateMockRedditSentiment, aggregateSentiment, generateNoDataSentimen
 import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalSentimentResult } from './professionalSentiment';
 import { professionalSentimentCache, logCacheStats } from './sentimentCache';
 import { analyzeSubredditSentiments, type EnhancedSentimentData } from "./subredditSentiment";
+import { getAIAnalysis } from './aiAnalysis';
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -861,6 +862,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(data);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch ticker data" });
+    }
+  });
+
+  // AI Analysis endpoint with caching
+  app.get("/api/ai-analysis/:ticker", async (req, res) => {
+    try {
+      const { ticker } = req.params;
+      
+      if (!ticker || typeof ticker !== 'string') {
+        return res.status(400).json({ message: "Valid ticker symbol required" });
+      }
+
+      console.log(`🤖 AI Analysis request for ${ticker.toUpperCase()}`);
+      
+      const analysis = await getAIAnalysis(ticker.toUpperCase());
+      
+      res.json({
+        success: true,
+        data: analysis,
+        ticker: ticker.toUpperCase()
+      });
+    } catch (error) {
+      console.error(`❌ AI Analysis error for ${req.params.ticker}:`, error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch AI analysis",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
