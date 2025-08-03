@@ -161,8 +161,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const usageCount = usage.length;
-      const remainingLimit = 10 - usageCount; // FREE_TICKER_LIMIT
       const freeTickers = ['NVDA', 'TSLA', 'AAPL']; // Always free tickers
+      
+      // Admin users have unlimited access
+      if (user.tier === 'admin') {
+        res.json({
+          usage,
+          usageCount,
+          remainingLimit: -1, // -1 indicates unlimited
+          tier: user.tier,
+          resetDate: user.usageResetDate,
+          freeTickers,
+          isLimitReached: false,
+          tickerList: usage.map(u => u.tickerSymbol),
+          tickersUsed: usageCount,
+          tickerLimit: -1 // Unlimited for admin
+        });
+        return;
+      }
+
+      const remainingLimit = 10 - usageCount; // FREE_TICKER_LIMIT for regular users
 
       res.json({
         usage,

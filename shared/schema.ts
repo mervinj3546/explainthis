@@ -13,7 +13,7 @@ export const users = pgTable("users", {
   provider: text("provider"), // 'local', 'google', 'facebook', 'microsoft'
   providerId: text("provider_id"), // OAuth provider's user ID
   emailVerified: timestamp("email_verified"), // For OAuth users, auto-verified
-  tier: text("tier").default("free"), // 'free', 'premium'
+  tier: text("tier").default("free"), // 'free', 'premium', 'admin'
   tickersUsed: integer("tickers_used").default(0), // Count of unique tickers searched
   usageResetDate: date("usage_reset_date"), // For premium users daily reset
   createdAt: timestamp("created_at").defaultNow(),

@@ -84,6 +84,7 @@ export class MemStorage implements IStorage {
     // Seed with some sample tickers and demo user
     this.seedTickers();
     this.seedDemoUser();
+    this.seedAdminUser();
   }
 
   private async seedTickers() {
@@ -127,6 +128,32 @@ export class MemStorage implements IStorage {
     
     // Clear any existing hardcoded data for demo user (in case server has been restarted)
     this.clearDemoUserData(demoId);
+  }
+
+  private async seedAdminUser() {
+    // Only create admin user if password is provided in environment
+    if (!process.env.ADMIN_PASSWORD) {
+      return;
+    }
+
+    const adminId = "admin-user-id";
+    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+    const adminUser: User = {
+      id: adminId,
+      email: "admin@explainthis.app",
+      password: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+      profilePicture: null,
+      provider: null,
+      providerId: null,
+      emailVerified: new Date(), // Admin is pre-verified
+      tier: "admin", // Special admin tier with unlimited access
+      tickersUsed: 0,
+      usageResetDate: null,
+      createdAt: new Date(),
+    };
+    this.users.set(adminId, adminUser);
   }
 
   private clearDemoUserData(demoUserId: string) {
@@ -245,15 +272,20 @@ export class MemStorage implements IStorage {
   async addTickerUsage(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; usage: UserTickerUsage | null; remainingLimit: number }> {
     const symbol = tickerSymbol.toUpperCase();
     
-    // Check if this ticker is always free
-    if (this.FREE_TICKERS.includes(symbol)) {
-      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
-    }
-
     // Get user to check tier
     const user = await this.getUser(userId);
     if (!user) {
       return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Admin users have unlimited access
+    if (user.tier === 'admin') {
+      return { allowed: true, usage: null, remainingLimit: -1 }; // -1 indicates unlimited
+    }
+    
+    // Check if this ticker is always free
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
     }
 
     // Check if user already has access to this ticker
@@ -306,14 +338,19 @@ export class MemStorage implements IStorage {
   async canUserAccessTicker(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; reason?: string; remainingLimit: number }> {
     const symbol = tickerSymbol.toUpperCase();
     
-    // Free tickers are always accessible
-    if (this.FREE_TICKERS.includes(symbol)) {
-      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
-    }
-
     const user = await this.getUser(userId);
     if (!user) {
       return { allowed: false, reason: 'User not found', remainingLimit: 0 };
+    }
+
+    // Admin users have unlimited access
+    if (user.tier === 'admin') {
+      return { allowed: true, remainingLimit: -1 }; // -1 indicates unlimited
+    }
+    
+    // Free tickers are always accessible
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
     }
 
     // Check if user already has access to this ticker
@@ -550,6 +587,7 @@ export class DbStorage implements IStorage {
   constructor() {
     // Initialize with demo data
     this.seedDatabase();
+    this.seedAdminUser();
   }
 
   private async seedDatabase() {
@@ -645,6 +683,42 @@ export class DbStorage implements IStorage {
       }
     } catch (error) {
       console.error('Error seeding database:', error);
+    }
+  }
+
+  private async seedAdminUser() {
+    try {
+      // Only create admin user if password is provided in environment
+      if (!process.env.ADMIN_PASSWORD) {
+        return;
+      }
+
+      // Check if admin user already exists
+      const existingAdmin = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, "admin@explainthis.app"))
+        .limit(1);
+
+      if (existingAdmin.length === 0) {
+        // Create admin user
+        const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
+        await db
+          .insert(users)
+          .values({
+            email: "admin@explainthis.app",
+            password: hashedPassword,
+            firstName: "Admin",
+            lastName: "User",
+            provider: "local",
+            emailVerified: new Date(), // Admin is pre-verified
+            tier: "admin", // Special admin tier with unlimited access
+            tickersUsed: 0,
+          });
+        console.log('✅ Admin user created successfully');
+      }
+    } catch (error) {
+      console.error('Error seeding admin user:', error);
     }
   }
 
@@ -759,15 +833,20 @@ export class DbStorage implements IStorage {
   async addTickerUsage(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; usage: UserTickerUsage | null; remainingLimit: number }> {
     const symbol = tickerSymbol.toUpperCase();
     
-    // Check if this ticker is always free
-    if (this.FREE_TICKERS.includes(symbol)) {
-      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
-    }
-
     // Get user to check tier
     const user = await this.getUser(userId);
     if (!user) {
       return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Admin users have unlimited access
+    if (user.tier === 'admin') {
+      return { allowed: true, usage: null, remainingLimit: -1 }; // -1 indicates unlimited
+    }
+    
+    // Check if this ticker is always free
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
     }
 
     // Check if user already has access to this ticker
@@ -829,14 +908,19 @@ export class DbStorage implements IStorage {
   async canUserAccessTicker(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; reason?: string; remainingLimit: number }> {
     const symbol = tickerSymbol.toUpperCase();
     
-    // Free tickers are always accessible
-    if (this.FREE_TICKERS.includes(symbol)) {
-      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
-    }
-
     const user = await this.getUser(userId);
     if (!user) {
       return { allowed: false, reason: 'User not found', remainingLimit: 0 };
+    }
+
+    // Admin users have unlimited access
+    if (user.tier === 'admin') {
+      return { allowed: true, remainingLimit: -1 }; // -1 indicates unlimited
+    }
+    
+    // Free tickers are always accessible
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
     }
 
     // Check if user already has access to this ticker
