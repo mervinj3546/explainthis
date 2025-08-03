@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { FileText, Brain, BarChart3, TrendingUp, Users, MoreHorizontal } from "lucide-react";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import type { TickerData } from "@shared/schema";
 import { StockPrimaryDetails } from "@/components/stock/StockPrimaryDetails";
 import { TechnicalAnalysisDashboard } from "@/components/TechnicalAnalysisDashboard";
@@ -24,8 +27,13 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
   const [activeTab, setActiveTab] = useState("primary");
   const [visibleTabs, setVisibleTabs] = useState<string[]>([]);
   const [overflowTabs, setOverflowTabs] = useState<string[]>([]);
+  const [upgradePrompt, setUpgradePrompt] = useState<{ show: boolean; reason: string; requiresAuth: boolean } | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Define all tabs with their metadata
   const allTabs = [
@@ -152,25 +160,107 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
     }
   }, [visibleTabs]);
 
-  const { data: newsData, isLoading: newsLoading } = useQuery<TickerData>({
+  const { data: newsData, isLoading: newsLoading, error: newsError } = useQuery<TickerData>({
     queryKey: ["/api/ticker-data", tickerSymbol, "news"],
     enabled: !!tickerSymbol,
+    retry: false,
   });
 
-  const { data: sentimentData, isLoading: sentimentLoading } = useQuery<TickerData>({
+  const { data: sentimentData, isLoading: sentimentLoading, error: sentimentError } = useQuery<TickerData>({
     queryKey: ["/api/ticker-data", tickerSymbol, "sentiment"],
     enabled: !!tickerSymbol,
+    retry: false,
   });
 
-  const { data: fundamentalsData, isLoading: fundamentalsLoading } = useQuery<TickerData>({
+  const { data: fundamentalsData, isLoading: fundamentalsLoading, error: fundamentalsError } = useQuery<TickerData>({
     queryKey: ["/api/ticker-data", tickerSymbol, "fundamentals"],
     enabled: !!tickerSymbol,
+    retry: false,
   });
 
-  const { data: technicalData, isLoading: technicalLoading } = useQuery<TickerData>({
+  const { data: technicalData, isLoading: technicalLoading, error: technicalError } = useQuery<TickerData>({
     queryKey: ["/api/ticker-data", tickerSymbol, "technical"],
     enabled: !!tickerSymbol,
+    retry: false,
   });
+
+  // Refresh usage tracker when any ticker data is successfully fetched
+  useEffect(() => {
+    if (newsData || sentimentData || fundamentalsData || technicalData) {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/usage'] });
+    }
+  }, [newsData, sentimentData, fundamentalsData, technicalData, queryClient]);
+
+  // Handle errors from API calls
+  useEffect(() => {
+    const errors = [newsError, sentimentError, fundamentalsError, technicalError].filter(Boolean);
+    if (errors.length > 0) {
+      const firstError = errors[0] as any;
+      const errorMessage = firstError?.message || '';
+      
+      if (errorMessage.includes('401') || errorMessage.includes('Authentication required')) {
+        setUpgradePrompt({ show: true, reason: "Sign up required for this ticker", requiresAuth: true });
+      } else if (errorMessage.includes('403') || errorMessage.includes('upgrade')) {
+        setUpgradePrompt({ show: true, reason: "Upgrade required for unlimited ticker access", requiresAuth: false });
+      }
+    } else {
+      setUpgradePrompt(null);
+    }
+  }, [newsError, sentimentError, fundamentalsError, technicalError]);
+
+  // Upgrade mutation
+  const upgradeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/user/upgrade', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to upgrade account');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/usage'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      setUpgradePrompt(null);
+      toast({
+        title: 'Upgrade Successful!',
+        description: 'You now have premium access with daily limits.',
+      });
+      // Retry fetching data
+      queryClient.invalidateQueries({ queryKey: ["/api/ticker-data", tickerSymbol] });
+    },
+    onError: () => {
+      toast({
+        title: 'Upgrade Failed',
+        description: 'Please try again later.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Handle sign up redirect
+  const handleSignUp = () => {
+    window.location.href = '/login';
+  };
+
+  // Check if any data fetch resulted in an error that should show upgrade prompt
+  const hasAccessError = newsError || sentimentError || fundamentalsError || technicalError;
+
+  // Show upgrade prompt if there's an access error
+  if (upgradePrompt?.show || hasAccessError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-4">
+        <UpgradePrompt
+          reason={upgradePrompt?.reason || "Access to this ticker requires an upgrade"}
+          remainingLimit={0}
+          onUpgrade={() => upgradeMutation.mutate()}
+          onSignUp={upgradePrompt?.requiresAuth ? handleSignUp : undefined}
+          isUpgrading={upgradeMutation.isPending}
+          requiresAuth={upgradePrompt?.requiresAuth || false}
+        />
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="w-full tab-container">

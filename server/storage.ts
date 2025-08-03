@@ -3,6 +3,7 @@ import {
   tickers, 
   userWatchlists, 
   userSearchHistory, 
+  userTickerUsage,
   tickerData,
   type User, 
   type InsertUser,
@@ -12,12 +13,13 @@ import {
   type InsertTicker,
   type UserWatchlist,
   type UserSearchHistory,
+  type UserTickerUsage,
   type TickerData
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { db } from "./db";
-import { eq, and, desc, ilike } from "drizzle-orm";
+import { eq, and, desc, ilike, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -29,6 +31,15 @@ export interface IStorage {
   createOAuthUser(user: OAuthUser): Promise<User>;
   linkOAuthProvider(userId: string, oauthData: { provider: string; providerId: string; profilePicture?: string }): Promise<User>;
   validateUser(email: string, password: string): Promise<User | null>;
+  
+  // Ticker usage operations
+  getUserTickerUsage(userId: string): Promise<UserTickerUsage[]>;
+  addTickerUsage(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; usage: UserTickerUsage | null; remainingLimit: number }>;
+  getUserTickerCount(userId: string): Promise<number>;
+  canUserAccessTicker(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; reason?: string; remainingLimit: number }>;
+  upgradeUserToPremium(userId: string): Promise<User>;
+  resetDailyUsage(userId: string): Promise<User>;
+  resetUserUsage(userId: string): Promise<void>;
   
   // Ticker operations
   getTicker(symbol: string): Promise<Ticker | undefined>;
@@ -52,11 +63,16 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private tickers: Map<string, Ticker>;
-  private watchlists: Map<string, UserWatchlist>;
-  private searchHistory: Map<string, UserSearchHistory>;
-  private tickerDataStore: Map<string, TickerData>;
+  private users = new Map<string, User>();
+  private tickers = new Map<string, Ticker>();
+  private watchlists = new Map<string, UserWatchlist>();
+  private searchHistory = new Map<string, UserSearchHistory>();
+  private tickerUsage = new Map<string, UserTickerUsage>();
+  private tickerDataStore = new Map<string, TickerData>();
+
+  // Free tier constants
+  private readonly FREE_TICKER_LIMIT = 10;
+  private readonly FREE_TICKERS = ['NVDA', 'TSLA', 'AAPL']; // Always free access
 
   constructor() {
     this.users = new Map();
@@ -99,6 +115,9 @@ export class MemStorage implements IStorage {
       provider: null,
       providerId: null,
       emailVerified: null,
+      tier: "free",
+      tickersUsed: 0,
+      usageResetDate: null,
       createdAt: new Date(),
     };
     this.users.set(demoId, demoUser);
@@ -157,6 +176,9 @@ export class MemStorage implements IStorage {
       provider: 'local',
       providerId: null,
       emailVerified: null,
+      tier: 'free',
+      tickersUsed: 0,
+      usageResetDate: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -175,6 +197,9 @@ export class MemStorage implements IStorage {
       provider: oauthUser.provider,
       providerId: oauthUser.providerId,
       emailVerified: new Date(), // OAuth emails are pre-verified
+      tier: 'free',
+      tickersUsed: 0,
+      usageResetDate: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -205,6 +230,191 @@ export class MemStorage implements IStorage {
     
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  // Ticker usage methods
+  async getUserTickerUsage(userId: string): Promise<UserTickerUsage[]> {
+    return Array.from(this.tickerUsage.values()).filter(usage => usage.userId === userId);
+  }
+
+  async getUserTickerCount(userId: string): Promise<number> {
+    const usageList = await this.getUserTickerUsage(userId);
+    return usageList.length;
+  }
+
+  async addTickerUsage(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; usage: UserTickerUsage | null; remainingLimit: number }> {
+    const symbol = tickerSymbol.toUpperCase();
+    
+    // Check if this ticker is always free
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    // Get user to check tier
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Check if user already has access to this ticker
+    const existingUsage = Array.from(this.tickerUsage.values()).find(
+      usage => usage.userId === userId && usage.tickerSymbol === symbol
+    );
+
+    if (existingUsage) {
+      // User already has access to this ticker, just update search count
+      existingUsage.searchCount = (existingUsage.searchCount || 0) + 1;
+      const currentCount = await this.getUserTickerCount(userId);
+      const remainingLimit = this.FREE_TICKER_LIMIT - currentCount;
+      return { allowed: true, usage: existingUsage, remainingLimit };
+    }
+
+    // For premium users, check daily reset
+    if (user.tier === 'premium') {
+      await this.checkAndResetDailyUsage(userId);
+    }
+
+    // Count current unique tickers
+    const currentCount = await this.getUserTickerCount(userId);
+    
+    // Check limits for new ticker access
+    if (user.tier === 'free' && currentCount >= this.FREE_TICKER_LIMIT) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    if (user.tier === 'premium' && currentCount >= this.FREE_TICKER_LIMIT) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Create new usage record for a new ticker
+    const id = randomUUID();
+    const newUsage: UserTickerUsage = {
+      id,
+      userId,
+      tickerSymbol: symbol,
+      firstSearched: new Date(),
+      searchCount: 1,
+    };
+    
+    this.tickerUsage.set(id, newUsage);
+
+    // Calculate new remaining limit (currentCount + 1 because we just added one)
+    const remainingLimit = this.FREE_TICKER_LIMIT - (currentCount + 1);
+    return { allowed: true, usage: newUsage, remainingLimit };
+  }
+
+  async canUserAccessTicker(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; reason?: string; remainingLimit: number }> {
+    const symbol = tickerSymbol.toUpperCase();
+    
+    // Free tickers are always accessible
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { allowed: false, reason: 'User not found', remainingLimit: 0 };
+    }
+
+    // Check if user already has access to this ticker
+    const existingUsage = Array.from(this.tickerUsage.values()).find(
+      usage => usage.userId === userId && usage.tickerSymbol === symbol
+    );
+
+    if (existingUsage) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    // For premium users, check daily reset
+    if (user.tier === 'premium') {
+      await this.checkAndResetDailyUsage(userId);
+    }
+
+    const currentCount = await this.getUserTickerCount(userId);
+    const remainingLimit = this.FREE_TICKER_LIMIT - currentCount;
+
+    if (currentCount >= this.FREE_TICKER_LIMIT) {
+      const reason = user.tier === 'free' 
+        ? 'Free tier limit reached. Upgrade to premium for daily resets.'
+        : 'Daily limit reached. Limit resets tomorrow.';
+      return { allowed: false, reason, remainingLimit: 0 };
+    }
+
+    return { allowed: true, remainingLimit };
+  }
+
+  async upgradeUserToPremium(userId: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const updatedUser: User = {
+      ...user,
+      tier: 'premium',
+      usageResetDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+    };
+
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async resetDailyUsage(userId: string): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Clear all ticker usage for this user (except free tickers which don't count)
+    const userUsage = Array.from(this.tickerUsage.entries()).filter(
+      ([_, usage]) => usage.userId === userId && !this.FREE_TICKERS.includes(usage.tickerSymbol)
+    );
+
+    userUsage.forEach(([id, _]) => {
+      this.tickerUsage.delete(id);
+    });
+
+    const updatedUser: User = {
+      ...user,
+      tickersUsed: 0,
+      usageResetDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+    };
+
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  private async checkAndResetDailyUsage(userId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user || user.tier !== 'premium') return;
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const lastReset = user.usageResetDate;
+
+    if (lastReset !== today) {
+      await this.resetDailyUsage(userId);
+    }
+  }
+
+  async resetUserUsage(userId: string): Promise<void> {
+    // Clear all ticker usage for the user
+    const userUsage = Array.from(this.tickerUsage.entries()).filter(
+      ([_, usage]) => usage.userId === userId
+    );
+    
+    userUsage.forEach(([id]) => {
+      this.tickerUsage.delete(id);
+    });
+
+    // Reset user's ticker count (note: we removed the tickersUsed field but keeping for compatibility)
+    const user = this.users.get(userId);
+    if (user) {
+      this.users.set(userId, {
+        ...user,
+        tickersUsed: 0,
+        usageResetDate: new Date().toISOString().split('T')[0]
+      });
+    }
   }
 
   async getTicker(symbol: string): Promise<Ticker | undefined> {
@@ -524,6 +734,212 @@ export class DbStorage implements IStorage {
 
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  // Ticker usage methods for DbStorage
+  private readonly FREE_TICKER_LIMIT = 10;
+  private readonly FREE_TICKERS = ['NVDA', 'TSLA', 'AAPL']; // Always free access
+
+  async getUserTickerUsage(userId: string): Promise<UserTickerUsage[]> {
+    const result = await db
+      .select()
+      .from(userTickerUsage)
+      .where(eq(userTickerUsage.userId, userId));
+    return result;
+  }
+
+  async getUserTickerCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(userTickerUsage)
+      .where(eq(userTickerUsage.userId, userId));
+    return result[0]?.count || 0;
+  }
+
+  async addTickerUsage(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; usage: UserTickerUsage | null; remainingLimit: number }> {
+    const symbol = tickerSymbol.toUpperCase();
+    
+    // Check if this ticker is always free
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, usage: null, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    // Get user to check tier
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Check if user already has access to this ticker
+    const existingUsage = await db
+      .select()
+      .from(userTickerUsage)
+      .where(and(
+        eq(userTickerUsage.userId, userId),
+        eq(userTickerUsage.tickerSymbol, symbol)
+      ))
+      .limit(1);
+
+    if (existingUsage.length > 0) {
+      // User already has access to this ticker, just update search count
+      const [updatedUsage] = await db
+        .update(userTickerUsage)
+        .set({ searchCount: (existingUsage[0].searchCount || 0) + 1 })
+        .where(eq(userTickerUsage.id, existingUsage[0].id))
+        .returning();
+      
+      const currentCount = await this.getUserTickerCount(userId);
+      const remainingLimit = this.FREE_TICKER_LIMIT - currentCount;
+      return { allowed: true, usage: updatedUsage, remainingLimit };
+    }
+
+    // For premium users, check daily reset
+    if (user.tier === 'premium') {
+      await this.checkAndResetDailyUsage(userId);
+    }
+
+    // Count current unique tickers
+    const currentCount = await this.getUserTickerCount(userId);
+    
+    // Check limits
+    if (user.tier === 'free' && currentCount >= this.FREE_TICKER_LIMIT) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    if (user.tier === 'premium' && currentCount >= this.FREE_TICKER_LIMIT) {
+      return { allowed: false, usage: null, remainingLimit: 0 };
+    }
+
+    // Create new usage record for a new ticker
+    const [newUsage] = await db
+      .insert(userTickerUsage)
+      .values({
+        userId,
+        tickerSymbol: symbol,
+        firstSearched: new Date(),
+        searchCount: 1,
+      })
+      .returning();
+
+    // Calculate new remaining limit (currentCount + 1 because we just added one)
+    const remainingLimit = this.FREE_TICKER_LIMIT - (currentCount + 1);
+    return { allowed: true, usage: newUsage, remainingLimit };
+  }
+
+  async canUserAccessTicker(userId: string, tickerSymbol: string): Promise<{ allowed: boolean; reason?: string; remainingLimit: number }> {
+    const symbol = tickerSymbol.toUpperCase();
+    
+    // Free tickers are always accessible
+    if (this.FREE_TICKERS.includes(symbol)) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    const user = await this.getUser(userId);
+    if (!user) {
+      return { allowed: false, reason: 'User not found', remainingLimit: 0 };
+    }
+
+    // Check if user already has access to this ticker
+    const existingUsage = await db
+      .select()
+      .from(userTickerUsage)
+      .where(and(
+        eq(userTickerUsage.userId, userId),
+        eq(userTickerUsage.tickerSymbol, symbol)
+      ))
+      .limit(1);
+
+    if (existingUsage.length > 0) {
+      return { allowed: true, remainingLimit: this.FREE_TICKER_LIMIT };
+    }
+
+    // For premium users, check daily reset
+    if (user.tier === 'premium') {
+      await this.checkAndResetDailyUsage(userId);
+    }
+
+    const currentCount = await this.getUserTickerCount(userId);
+    const remainingLimit = this.FREE_TICKER_LIMIT - currentCount;
+
+    if (currentCount >= this.FREE_TICKER_LIMIT) {
+      const reason = user.tier === 'free' 
+        ? 'Free tier limit reached. Upgrade to premium for daily resets.'
+        : 'Daily limit reached. Limit resets tomorrow.';
+      return { allowed: false, reason, remainingLimit: 0 };
+    }
+
+    return { allowed: true, remainingLimit };
+  }
+
+  async upgradeUserToPremium(userId: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        tier: 'premium',
+        usageResetDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+
+    return updatedUser;
+  }
+
+  async resetDailyUsage(userId: string): Promise<User> {
+    // Clear all ticker usage for this user (except free tickers which don't count)
+    await db
+      .delete(userTickerUsage)
+      .where(and(
+        eq(userTickerUsage.userId, userId),
+        // Only delete non-free tickers
+      ));
+
+    // Reset user's ticker count and update reset date
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        tickersUsed: 0,
+        usageResetDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+
+    return updatedUser;
+  }
+
+  private async checkAndResetDailyUsage(userId: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user || user.tier !== 'premium') return;
+
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const lastReset = user.usageResetDate;
+
+    if (lastReset !== today) {
+      await this.resetDailyUsage(userId);
+    }
+  }
+
+  async resetUserUsage(userId: string): Promise<void> {
+    // Clear all ticker usage for the user
+    await db
+      .delete(userTickerUsage)
+      .where(eq(userTickerUsage.userId, userId));
+
+    // Reset user's ticker count and usage date
+    await db
+      .update(users)
+      .set({ 
+        tickersUsed: 0,
+        usageResetDate: new Date().toISOString().split('T')[0]
+      })
+      .where(eq(users.id, userId));
   }
 
   async getTicker(symbol: string): Promise<Ticker | undefined> {

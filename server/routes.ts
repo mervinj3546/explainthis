@@ -56,6 +56,9 @@ declare module "express-session" {
   }
 }
 
+// Track tickers being processed to prevent duplicate counting during concurrent requests
+const processingTickers = new Map<string, boolean>();
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
   app.use(session({
@@ -142,6 +145,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ user: userWithoutPassword });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // User management routes
+  app.get("/api/user/usage", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const usage = await storage.getUserTickerUsage(userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const usageCount = usage.length;
+      const remainingLimit = 10 - usageCount; // FREE_TICKER_LIMIT
+      const freeTickers = ['NVDA', 'TSLA', 'AAPL']; // Always free tickers
+
+      res.json({
+        usage,
+        usageCount,
+        remainingLimit,
+        tier: user.tier,
+        resetDate: user.usageResetDate,
+        freeTickers,
+        isLimitReached: remainingLimit <= 0,
+        tickerList: usage.map(u => u.tickerSymbol), // Add ticker list for the component
+        // Add fields expected by the component
+        tickersUsed: usageCount,
+        tickerLimit: 10
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user usage" });
+    }
+  });
+
+  // Admin endpoint to reset user data
+  app.post("/api/admin/reset-user", async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email required" });
+      }
+
+      // Get user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Reset ticker usage
+      await storage.resetUserUsage(user.id);
+
+      res.json({ message: `Reset usage data for ${email}` });
+    } catch (error) {
+      console.error("Reset user error:", error);
+      res.status(500).json({ message: "Failed to reset user data" });
+    }
+  });
+
+  app.post("/api/user/upgrade", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const updatedUser = await storage.upgradeUserToPremium(userId);
+      
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Successfully upgraded to premium"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to upgrade user" });
+    }
+  });
+
+  app.post("/api/user/reset-usage", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.tier !== 'premium') {
+        return res.status(403).json({ message: "Premium account required" });
+      }
+      
+      const updatedUser = await storage.resetDailyUsage(userId);
+      
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Usage reset successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reset usage" });
     }
   });
 
@@ -328,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Ticker data routes (for financial information)
-  app.get("/api/ticker-data/:symbol/:type", async (req, res) => {
+  app.get("/api/ticker-data/:symbol/:type", async (req: any, res) => {
     console.log("🔥🔥🔥 THIS IS THE ROUTE HANDLER EXECUTING 🔥🔥🔥");
     console.log("🔥 ROUTE HANDLER HIT");
     try {
@@ -336,6 +433,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { refresh } = req.query;
       
       console.log(`Request for ${symbol}/${type}, refresh=${refresh}`);
+      
+      // Check if user is authenticated
+      const isAuthenticated = !!req.session.userId;
+      const userId = req.session.userId;
+      
+      // For anonymous users, only allow free tickers (NVDA, TSLA, AAPL)
+      const FREE_TICKERS = ['NVDA', 'TSLA', 'AAPL'];
+      
+      if (!isAuthenticated && !FREE_TICKERS.includes(symbol.toUpperCase())) {
+        return res.status(401).json({ 
+          message: "Authentication required", 
+          requiresAuth: true,
+          freeTickers: FREE_TICKERS
+        });
+      }
+      
+      // For authenticated users, check and track ticker usage limits
+      if (isAuthenticated) {
+        // First check if user can access this ticker
+        const accessCheck = await storage.canUserAccessTicker(userId, symbol);
+        
+        if (!accessCheck.allowed) {
+          return res.status(403).json({
+            message: "Ticker limit reached",
+            requiresUpgrade: true,
+            remainingLimit: accessCheck.remainingLimit
+          });
+        }
+        
+        // Only track usage for the first data type request for this ticker
+        // Use a combination of userId and ticker symbol to create a unique key
+        const userTickerKey = `${userId}-${symbol.toUpperCase()}`;
+        
+        // Check if this ticker is already being processed or has been tracked
+        const existingUsage = await storage.getUserTickerUsage(userId);
+        const hasAccessedTicker = existingUsage.some(usage => usage.tickerSymbol === symbol.toUpperCase());
+        
+        if (!hasAccessedTicker && !processingTickers.has(userTickerKey)) {
+          // Mark this ticker as being processed to prevent concurrent additions
+          processingTickers.set(userTickerKey, true);
+          
+          try {
+            // This is the first request for this ticker, track the usage
+            const usageResult = await storage.addTickerUsage(userId, symbol);
+            console.log(`New ticker usage tracked for ${symbol}: allowed=${usageResult.allowed}, remaining=${usageResult.remainingLimit}`);
+          } finally {
+            // Remove from processing map after a short delay to allow other requests to see it's been added
+            setTimeout(() => {
+              processingTickers.delete(userTickerKey);
+            }, 1000);
+          }
+        } else {
+          console.log(`Ticker ${symbol} already tracked or being processed for user, skipping usage increment`);
+        }
+      }
       
       // Check if we should use cached data or fetch fresh data
       let shouldFetchFresh = refresh === 'true';

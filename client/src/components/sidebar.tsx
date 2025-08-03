@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star, StarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UsageTracker } from "@/components/usage-tracker";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import type { Ticker } from "@shared/schema";
 
 interface SidebarProps {
@@ -27,6 +29,7 @@ interface SearchHistoryItem {
 export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
   const { data: searchHistory = [] } = useQuery<SearchHistoryItem[]>({
     queryKey: ["/api/search-history"],
@@ -212,6 +215,13 @@ export function Sidebar({ onTickerSelect, currentTicker }: SidebarProps) {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Usage Tracker for authenticated users */}
+      {isAuthenticated && (
+        <div className="mt-4">
+          <UsageTracker />
+        </div>
+      )}
     </div>
   );
 }

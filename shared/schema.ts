@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, real, integer, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -13,6 +13,9 @@ export const users = pgTable("users", {
   provider: text("provider"), // 'local', 'google', 'facebook', 'microsoft'
   providerId: text("provider_id"), // OAuth provider's user ID
   emailVerified: timestamp("email_verified"), // For OAuth users, auto-verified
+  tier: text("tier").default("free"), // 'free', 'premium'
+  tickersUsed: integer("tickers_used").default(0), // Count of unique tickers searched
+  usageResetDate: date("usage_reset_date"), // For premium users daily reset
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -40,6 +43,14 @@ export const userSearchHistory = pgTable("user_search_history", {
   userId: varchar("user_id").notNull().references(() => users.id),
   tickerSymbol: text("ticker_symbol").notNull(),
   searchedAt: timestamp("searched_at").defaultNow(),
+});
+
+export const userTickerUsage = pgTable("user_ticker_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  tickerSymbol: text("ticker_symbol").notNull(),
+  firstSearched: timestamp("first_searched").defaultNow(),
+  searchCount: integer("search_count").default(1),
 });
 
 export const tickerData = pgTable("ticker_data", {
@@ -86,5 +97,6 @@ export type User = typeof users.$inferSelect;
 export type Ticker = typeof tickers.$inferSelect;
 export type UserWatchlist = typeof userWatchlists.$inferSelect;
 export type UserSearchHistory = typeof userSearchHistory.$inferSelect;
+export type UserTickerUsage = typeof userTickerUsage.$inferSelect;
 export type TickerData = typeof tickerData.$inferSelect;
 export type InsertTicker = z.infer<typeof insertTickerSchema>;
