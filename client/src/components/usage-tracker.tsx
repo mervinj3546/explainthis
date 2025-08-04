@@ -25,6 +25,19 @@ export function UsageTracker() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Function to get next reset time (midnight in user's timezone)
+  const getNextResetTime = () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0); // Set to midnight
+    return tomorrow.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
   const { data: usage, isLoading } = useQuery<UsageData>({
     queryKey: ['/api/user/usage'],
     queryFn: async () => {
@@ -103,7 +116,10 @@ export function UsageTracker() {
         <div className="space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{usage.tickersUsed || usage.usageCount || 0} of {usage.tickerLimit || 10} tickers used</span>
-            <span>{usage.remainingLimit || 0} remaining</span>
+            <span>
+              {usage.remainingLimit || 0} remaining
+              {usage.tier === 'premium' ? ' today' : ''}
+            </span>
           </div>
           <Progress 
             value={progressPercentage} 
@@ -128,7 +144,7 @@ export function UsageTracker() {
                   'Daily limit reached. Resets tomorrow.'
                 )
               ) : (
-                `Only ${usage.remainingLimit} ticker${usage.remainingLimit === 1 ? '' : 's'} remaining!`
+                `Only ${usage.remainingLimit} ticker${usage.remainingLimit === 1 ? '' : 's'} remaining${usage.tier === 'premium' ? ' today' : ''}!`
               )}
             </AlertDescription>
           </Alert>
@@ -154,9 +170,14 @@ export function UsageTracker() {
         )}
 
         {/* Premium Reset Info */}
-        {usage.tier === 'premium' && usage.usageResetDate && (
-          <div className="text-xs text-muted-foreground text-center">
-            Daily limit resets: {new Date().toDateString() === new Date(usage.usageResetDate).toDateString() ? 'Today' : 'Tomorrow'}
+        {usage.tier === 'premium' && (
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div className="text-center">
+              Daily limit resets: {usage.usageResetDate && new Date().toDateString() === new Date(usage.usageResetDate).toDateString() ? 'Today' : 'Tomorrow'}
+            </div>
+            <div className="text-center">
+              Your ticker count resets at {getNextResetTime()}
+            </div>
           </div>
         )}
 

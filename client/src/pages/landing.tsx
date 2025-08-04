@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TickerSearch } from "@/components/ticker-search";
+import { TickerLimitModal } from "@/components/TickerLimitModal";
 import type { Ticker } from "@shared/schema";
 
 interface WatchlistItem {
@@ -21,6 +22,16 @@ interface SearchHistoryItem {
   tickerSymbol: string;
   ticker: Ticker;
   searchedAt: string;
+}
+
+interface UserUsage {
+  usage: any[];
+  usageCount: number;
+  remainingLimit: number;
+  tier: string;
+  isLimitReached: boolean;
+  tickersUsed: number;
+  tickerLimit: number;
 }
 
 // Common popular tickers for fallback
@@ -53,6 +64,14 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
     queryKey: ["/api/search-history"],
   });
 
+  // Fetch user usage to check if limit is reached
+  const { data: userUsage } = useQuery<UserUsage>({
+    queryKey: ["/api/user/usage"],
+  });
+
+  // Show modal if user has hit their limit
+  const showLimitModal = userUsage?.isLimitReached && user?.tier !== 'admin';
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -71,6 +90,10 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
 
   const handleTickerSelect = (symbol: string) => {
     onTickerSelect(symbol.toUpperCase());
+  };
+
+  const handleUpgrade = () => {
+    window.location.href = '/pricing';
   };
 
   return (
@@ -286,6 +309,12 @@ export default function LandingPage({ onTickerSelect }: LandingPageProps) {
           </div>
         </div>
       </footer>
+
+      {/* Ticker Limit Modal */}
+      <TickerLimitModal 
+        isOpen={showLimitModal || false}
+        onUpgrade={handleUpgrade}
+      />
     </div>
   );
 }

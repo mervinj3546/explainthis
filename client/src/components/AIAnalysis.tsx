@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Brain, TrendingUp, Calendar, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Brain, TrendingUp, Calendar, AlertTriangle, Crown, Zap } from "lucide-react";
 
 interface AIAnalysisData {
   companyOverview: string;
@@ -30,6 +31,13 @@ interface AIAnalysisProps {
   ticker: string;
 }
 
+class PremiumRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PremiumRequiredError';
+  }
+}
+
 export function AIAnalysis({ ticker }: AIAnalysisProps) {
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [showMinimumLoading, setShowMinimumLoading] = useState(false);
@@ -38,13 +46,20 @@ export function AIAnalysis({ ticker }: AIAnalysisProps) {
     queryKey: ["/api/ai-analysis", ticker],
     queryFn: async () => {
       const response = await fetch(`/api/ai-analysis/${ticker}`);
+      if (response.status === 403) {
+        throw new PremiumRequiredError('Premium subscription required for AI analysis');
+      }
       if (!response.ok) {
         throw new Error('Failed to fetch AI analysis');
       }
       return response.json();
     },
     staleTime: 16 * 60 * 60 * 1000, // 16 hours
-    retry: 1,
+    retry: (failureCount, error) => {
+      // Don't retry premium required errors
+      if (error instanceof PremiumRequiredError) return false;
+      return failureCount < 1;
+    },
   });
 
   // Show loading for 5 seconds on first load to give impression of fresh analysis
@@ -86,6 +101,56 @@ export function AIAnalysis({ ticker }: AIAnalysisProps) {
   }
 
   if (error || !aiData?.success) {
+    // Handle premium required error with upgrade prompt
+    if (error instanceof PremiumRequiredError) {
+      return (
+        <Card className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)] relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent-purple/10 via-transparent to-accent-blue/10" />
+          <CardContent className="py-12 relative">
+            <div className="text-center">
+              <div className="relative mb-6">
+                <Crown className="h-16 w-16 mx-auto text-accent-purple drop-shadow-lg" />
+                <Zap className="h-6 w-6 absolute -top-1 -right-1 text-accent-amber animate-pulse" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">
+                AI Analysis - Premium Feature
+              </h3>
+              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                Get deep AI-powered insights, market analysis, and investment recommendations powered by advanced language models.
+              </p>
+              <div className="mb-6">
+                <div className="inline-flex items-center space-x-4 text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-1">
+                    <Brain className="h-4 w-4 text-accent-purple" />
+                    <span>AI Analysis</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <TrendingUp className="h-4 w-4 text-accent-blue" />
+                    <span>Market Insights</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-4 w-4 text-accent-amber" />
+                    <span>Investment Outlook</span>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                className="bg-gradient-to-r from-accent-purple to-accent-blue hover:from-accent-purple/90 hover:to-accent-blue/90 text-white font-medium px-8 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                onClick={() => window.location.href = '/pricing'}
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3">
+                Cancel anytime
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Handle other errors
     return (
       <Card className="bg-[#1E2227] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
         <CardContent className="py-12">
