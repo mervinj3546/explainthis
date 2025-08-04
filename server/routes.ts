@@ -5,7 +5,7 @@ import { loginSchema, insertUserSchema } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import passport from "./auth";
-import { getBasicStockData } from "./stockData";
+import { getBasicStockData, getYTDData, getFastStockData } from "./stockData";
 import { getTechnicalIndicators } from "./technicalAnalysis";
 import { generateMockRedditSentiment, aggregateSentiment, generateNoDataSentiment, analyzeSentimentAdvanced } from './sentimentAnalysis';
 import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalSentimentResult } from './professionalSentiment';
@@ -333,7 +333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stock market data routes (using external APIs)
   app.get("/api/stock/basic", getBasicStockData);
+  app.get("/api/stock/fast", getFastStockData);
   app.get("/api/stock/technical", getTechnicalIndicators);
+  app.get("/api/stock/ytd", getYTDData);
 
   // Watchlist routes
   app.get("/api/watchlist", requireAuth, async (req: any, res) => {

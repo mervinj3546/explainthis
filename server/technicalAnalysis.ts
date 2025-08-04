@@ -20,6 +20,13 @@ interface TechnicalIndicators {
   signal: number[];
   histogram: number[];
   rsi: number[];
+  bollingerUpper: number[];
+  bollingerMiddle: number[];
+  bollingerLower: number[];
+  atr: number[];
+  obv: number[];
+  donchianUpper: number[];
+  donchianLower: number[];
   prices: HistoricalPrice[];
 }
 
@@ -85,6 +92,114 @@ function calculateRSI(prices: number[], period: number = 14): number[] {
   return rsi;
 }
 
+// Calculate Simple Moving Average
+function calculateSMA(prices: number[], period: number): number[] {
+  const sma: number[] = [];
+  
+  for (let i = period - 1; i < prices.length; i++) {
+    const sum = prices.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+    sma[i] = sum / period;
+  }
+  
+  return sma;
+}
+
+// Calculate Standard Deviation
+function calculateStandardDeviation(prices: number[], period: number, sma: number[]): number[] {
+  const stdDev: number[] = [];
+  
+  for (let i = period - 1; i < prices.length; i++) {
+    const slice = prices.slice(i - period + 1, i + 1);
+    const mean = sma[i];
+    const variance = slice.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / period;
+    stdDev[i] = Math.sqrt(variance);
+  }
+  
+  return stdDev;
+}
+
+// Calculate Bollinger Bands
+function calculateBollingerBands(prices: number[], period: number = 20, multiplier: number = 2): {
+  upper: number[];
+  middle: number[];
+  lower: number[];
+} {
+  const middle = calculateSMA(prices, period);
+  const stdDev = calculateStandardDeviation(prices, period, middle);
+  
+  const upper: number[] = [];
+  const lower: number[] = [];
+  
+  for (let i = 0; i < prices.length; i++) {
+    if (middle[i] !== undefined && stdDev[i] !== undefined) {
+      upper[i] = middle[i] + (stdDev[i] * multiplier);
+      lower[i] = middle[i] - (stdDev[i] * multiplier);
+    }
+  }
+  
+  return { upper, middle, lower };
+}
+
+// Calculate True Range
+function calculateTrueRange(high: number[], low: number[], close: number[]): number[] {
+  const trueRange: number[] = [];
+  
+  trueRange[0] = high[0] - low[0]; // First value
+  
+  for (let i = 1; i < high.length; i++) {
+    const tr1 = high[i] - low[i];
+    const tr2 = Math.abs(high[i] - close[i - 1]);
+    const tr3 = Math.abs(low[i] - close[i - 1]);
+    trueRange[i] = Math.max(tr1, tr2, tr3);
+  }
+  
+  return trueRange;
+}
+
+// Calculate Average True Range (ATR)
+function calculateATR(high: number[], low: number[], close: number[], period: number = 14): number[] {
+  const trueRange = calculateTrueRange(high, low, close);
+  return calculateSMA(trueRange, period);
+}
+
+// Calculate On Balance Volume (OBV)
+function calculateOBV(close: number[], volume: number[]): number[] {
+  const obv: number[] = [];
+  
+  obv[0] = volume[0]; // First value
+  
+  for (let i = 1; i < close.length; i++) {
+    if (close[i] > close[i - 1]) {
+      obv[i] = obv[i - 1] + volume[i]; // Price up, add volume
+    } else if (close[i] < close[i - 1]) {
+      obv[i] = obv[i - 1] - volume[i]; // Price down, subtract volume
+    } else {
+      obv[i] = obv[i - 1]; // Price unchanged, keep same OBV
+    }
+  }
+  
+  return obv;
+}
+
+// Calculate Donchian Channels
+function calculateDonchianChannels(high: number[], low: number[], period: number = 20): {
+  upper: number[];
+  lower: number[];
+} {
+  const upper: number[] = [];
+  const lower: number[] = [];
+  
+  for (let i = period - 1; i < high.length; i++) {
+    const highSlice = high.slice(i - period + 1, i + 1);
+    const lowSlice = low.slice(i - period + 1, i + 1);
+    
+    upper[i] = Math.max(...highSlice);
+    lower[i] = Math.min(...lowSlice);
+  }
+  
+  return { upper, lower };
+}
+
 export async function getTechnicalIndicators(req: Request, res: Response) {
   const { ticker } = req.query;
   
@@ -141,8 +256,11 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
       volume: item.v
     }));
     
-    // Extract closing prices for calculations
+    // Extract data for calculations
     const closingPrices = historicalData.map(item => item.close);
+    const highPrices = historicalData.map(item => item.high);
+    const lowPrices = historicalData.map(item => item.low);
+    const volumes = historicalData.map(item => item.volume);
     
     // Calculate technical indicators
     const ema8 = calculateEMA(closingPrices, 8);
@@ -151,6 +269,12 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
     const ema50 = calculateEMA(closingPrices, 50);
     const macdData = calculateMACD(closingPrices);
     const rsi = calculateRSI(closingPrices, 14);
+    
+    // Calculate new technical indicators
+    const bollingerData = calculateBollingerBands(closingPrices, 20, 2);
+    const atr = calculateATR(highPrices, lowPrices, closingPrices, 14);
+    const obv = calculateOBV(closingPrices, volumes);
+    const donchianData = calculateDonchianChannels(highPrices, lowPrices, 20);
     
     const response: TechnicalIndicators = {
       ema8,
@@ -161,6 +285,13 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
       signal: macdData.signal,
       histogram: macdData.histogram,
       rsi,
+      bollingerUpper: bollingerData.upper,
+      bollingerMiddle: bollingerData.middle,
+      bollingerLower: bollingerData.lower,
+      atr,
+      obv,
+      donchianUpper: donchianData.upper,
+      donchianLower: donchianData.lower,
       prices: historicalData
     };
     

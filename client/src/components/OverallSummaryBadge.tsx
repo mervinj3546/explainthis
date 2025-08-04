@@ -2,7 +2,8 @@ import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
-import { useStockData } from "@/hooks/use-stock-data";
+import { useFastStockData } from "@/hooks/use-fast-stock-data";
+import { useYTDData } from "@/hooks/use-ytd-data";
 import { useTechnicalIndicators } from "@/hooks/use-technical-indicators";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -380,7 +381,8 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
   const { isAuthenticated } = useAuth();
   
   // Always call hooks first, regardless of authentication status
-  const { data: stockData } = useStockData(ticker);
+  const { data: fastStockData } = useFastStockData(ticker);
+  const { data: ytdData } = useYTDData(ticker);
   const { data: technicalData } = useTechnicalIndicators(ticker);
   
   const { data: fundamentalsData } = useQuery<FundamentalsData>({
@@ -430,7 +432,7 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
   }
 
   // Calculate individual scores
-  const ytdPerformance = stockData?.ytd?.growthPct || 0;
+  const ytdPerformance = ytdData?.growthPct || 0;
   const fundamentalsScore = fundamentalsData ? calculateFundamentalsScore(fundamentalsData) : 50;
   
   const technicalRecommendation = technicalData ? analyzeTechnicalData(technicalData) : {
@@ -459,7 +461,7 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
   );
 
   // Don't show badge if we don't have enough data (AI Analysis excluded)
-  const hasMinimumData = stockData && (fundamentalsData || technicalData || sentimentData);
+  const hasMinimumData = fastStockData && (fundamentalsData || technicalData || sentimentData);
   
   if (!hasMinimumData) {
     return null;

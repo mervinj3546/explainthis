@@ -9,6 +9,13 @@ interface TechnicalData {
   signal: number[];
   histogram: number[];
   rsi: number[];
+  bollingerUpper: number[];
+  bollingerMiddle: number[];
+  bollingerLower: number[];
+  atr: number[];
+  obv: number[];
+  donchianUpper: number[];
+  donchianLower: number[];
   prices: Array<{
     date: string;
     open: number;

@@ -2,8 +2,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, TrendingUp, TrendingDown, Building2, DollarSign, BarChart3, Shield, Calculator, PieChart, Activity, Target, Gift } from "lucide-react";
-import { useStockData } from "@/hooks/use-stock-data";
+import { Info, TrendingUp, TrendingDown, Building2, DollarSign, BarChart3, Shield, Calculator, PieChart, Activity, Target, Gift, Loader2 } from "lucide-react";
+import { useFastStockData } from "@/hooks/use-fast-stock-data";
+import { useYTDData } from "@/hooks/use-ytd-data";
 import { useQuery } from "@tanstack/react-query";
 
 interface BeginnerFundamentalsProps {
@@ -106,12 +107,13 @@ const getGrowthColor = (value: number | string | null): string => {
 
 // Helper function to get ratio assessment
 const getRatioAssessment = (ratio: number | string | null, type: 'pe' | 'current' | 'debt'): { color: string, label: string } => {
-  if (!ratio || ratio === 'N/A') return { color: 'text-muted-foreground', label: 'Unknown' };
+  if (ratio === null || ratio === undefined || ratio === 'N/A') return { color: 'text-muted-foreground', label: 'Unknown' };
   const n = typeof ratio === 'string' ? parseFloat(ratio) : ratio;
   if (isNaN(n)) return { color: 'text-muted-foreground', label: 'Unknown' };
   
   switch (type) {
     case 'pe':
+      if (n <= 0) return { color: 'text-muted-foreground', label: 'N/A' }; // Handle negative or zero PE
       if (n < 15) return { color: 'text-bullish', label: 'Good Value' };
       if (n < 25) return { color: 'text-accent-amber', label: 'Fair Value' };
       return { color: 'text-bearish', label: 'Expensive' };
@@ -266,8 +268,11 @@ const getSectionSummary = (sectionName: string, metrics: any): string => {
 };
 
 export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
-  // Real-time price data (fetched fresh every 5 minutes, user-specific cache)
-  const { data: stockData, isLoading, error } = useStockData(ticker);
+  // Real-time price data (fetched fresh every 2 minutes)
+  const { data: fastStockData, isLoading: fastLoading, error: fastError } = useFastStockData(ticker);
+  
+  // YTD data (async loading with separate cache)
+  const { data: ytdData } = useYTDData(ticker);
   
   // Fundamentals data (cached 24 hours, shared across ALL users for same ticker)
   const { data: fundamentalsData, isLoading: fundamentalsLoading, error: fundamentalsError } = useQuery<FundamentalsData>({
@@ -286,7 +291,7 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
     retry: 2,
   });
 
-  if (isLoading || fundamentalsLoading) {
+  if (fastLoading || fundamentalsLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[1, 2, 3, 4].map((i) => (
@@ -307,13 +312,13 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
     );
   }
 
-  if (error || fundamentalsError || !fundamentalsData) {
+  if (fastError || fundamentalsError || !fundamentalsData) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <p className="text-muted-foreground mb-2">Unable to load fundamentals data</p>
           <p className="text-sm text-muted-foreground">
-            {fundamentalsError?.message || error?.message || "Data not available"}
+            {fundamentalsError?.message || fastError?.message || "Data not available"}
           </p>
         </div>
       </div>
@@ -322,9 +327,9 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
 
   // Use data from APIs with safe access - handle both new and old data structures
   console.log('Debug - Loading states:', { 
-    stockLoading: isLoading, 
-    fundamentalsLoading, 
-    stockError: error, 
+    stockLoading: fastLoading,
+    fundamentalsLoading,
+    stockError: fastError,
     fundamentalsError,
     fundamentalsData 
   });
@@ -359,15 +364,15 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
       : (fundamentalsData?.growth?.revenueGrowth?.ttm && fundamentalsData.growth.revenueGrowth.ttm > 0 ? 15.5 : 0),
     
     // Stock data
-    ytdPerformance: stockData?.ytd?.growthPct || 0,
-    yearHigh: stockData?.ytd?.yearHigh || 0,
-    yearLow: stockData?.ytd?.yearLow || 0,
-    currentPrice: stockData?.quote?.c || 0,
+    ytdPerformance: ytdData?.growthPct || 0,
+    yearHigh: ytdData?.yearHigh || 0,
+    yearLow: ytdData?.yearLow || 0,
+    currentPrice: fastStockData?.quote?.c || 0,
   };
   
   console.log('processed fundamentals:', fundamentals); // Debug log
 
-  const peAssessment = getRatioAssessment(apiData?.keyMetrics?.peRatio || 0, 'pe');
+  const peAssessment = getRatioAssessment(apiData?.keyMetrics?.peRatio || null, 'pe');
 
   // Generate overall assessment
   const getOverallAssessment = () => {
@@ -556,9 +561,18 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
                 <Building2 className="h-5 w-5 text-primary" />
                 Company Size & Value
               </CardTitle>
-              <Badge variant="outline" className={`${peAssessment.color} flex-shrink-0`}>
-                {peAssessment.label}
-              </Badge>
+              {fundamentalsLoading ? (
+                <Badge variant="outline" className="text-muted-foreground border-muted-foreground">
+                  <div className="flex items-center space-x-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Loading...</span>
+                  </div>
+                </Badge>
+              ) : apiData?.keyMetrics?.peRatio ? (
+                <Badge variant="outline" className={`${peAssessment.color} flex-shrink-0`}>
+                  {peAssessment.label}
+                </Badge>
+              ) : null}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{getSectionSummary('company-overview', apiData)}</p>
           </CardHeader>
@@ -612,9 +626,16 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
 
               <div className="text-center">
                 <div className="text-[#94A3B8] text-sm mb-2">52-Week Range</div>
-                <div className="text-[#E5E7EB] text-lg font-medium mb-1">
-                  ${fundamentals.yearLow?.toFixed(2)} - ${fundamentals.yearHigh?.toFixed(2)}
-                </div>
+                {ytdData && ytdData.yearLow && ytdData.yearHigh ? (
+                  <div className="text-[#E5E7EB] text-lg font-medium mb-1">
+                    ${ytdData.yearLow.toFixed(2)} - ${ytdData.yearHigh.toFixed(2)}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                    <div className="text-[#94A3B8] text-sm">Loading...</div>
+                  </div>
+                )}
                 <div className="text-[#94A3B8] text-xs">&nbsp;</div>
               </div>
             </div>
@@ -744,8 +765,8 @@ export function BeginnerFundamentals({ ticker }: BeginnerFundamentalsProps) {
 
               <div className="text-center border-t border-[#2F343B] pt-4 md:border-t-0 md:pt-0">
                 <div className="text-[#94A3B8] text-sm mb-2">Stock Performance</div>
-                <div className={`font-bold text-2xl ${getGrowthColor(stockData?.ytd?.growthPct || 0)}`}>
-                  {(stockData?.ytd?.growthPct || 0) >= 0 ? '+' : ''}{(stockData?.ytd?.growthPct || 0).toFixed(1)}%
+                <div className={`font-bold text-2xl ${getGrowthColor(ytdData?.growthPct || 0)}`}>
+                  {(ytdData?.growthPct || 0) >= 0 ? '+' : ''}{(ytdData?.growthPct || 0).toFixed(1)}%
                 </div>
                 <div className="text-[#94A3B8] text-xs mt-1">Year to date</div>
               </div>

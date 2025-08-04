@@ -7,6 +7,10 @@ import { TradingViewMiniWidget } from "./charts/TradingViewMiniWidget";
 import { EMAChart } from "./charts/EMAChart";
 import { MACDChart } from "./charts/MACDChart";
 import { RSIChart } from "./charts/RSIChart";
+import { BollingerBandsChart } from "./charts/BollingerBandsChart";
+import { ATRChart } from "./charts/ATRChart";
+import { OBVChart } from "./charts/OBVChart";
+import { DonchianChannelsChart } from "./charts/DonchianChannelsChart";
 import { TechnicalRecommendation } from "./TechnicalRecommendation";
 
 interface TechnicalAnalysisDashboardProps {
@@ -74,10 +78,22 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
           {/* EMA Chart */}
           <EMAChart data={technicalData} ticker={tickerSymbol} />
 
+          {/* Bollinger Bands Chart */}
+          <BollingerBandsChart data={technicalData} ticker={tickerSymbol} />
+
+          {/* Donchian Channels Chart */}
+          <DonchianChannelsChart data={technicalData} ticker={tickerSymbol} />
+
           {/* MACD and RSI Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MACDChart data={technicalData} ticker={tickerSymbol} />
             <RSIChart data={technicalData} ticker={tickerSymbol} />
+          </div>
+
+          {/* ATR and OBV Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ATRChart data={technicalData} ticker={tickerSymbol} />
+            <OBVChart data={technicalData} ticker={tickerSymbol} />
           </div>
         </div>
       )}
@@ -89,7 +105,7 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
             <CardTitle className="text-white">Current Indicators</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-400">
                   {technicalData.ema8[technicalData.ema8.length - 1]?.toFixed(2) || 'N/A'}
@@ -119,6 +135,42 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
                   {technicalData.rsi[technicalData.rsi.length - 1]?.toFixed(2) || 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">RSI</div>
+              </div>
+            </div>
+            
+            {/* New Indicators Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#2A2F36]">
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-400">
+                  {technicalData.atr[technicalData.atr.length - 1]?.toFixed(3) || 'N/A'}
+                </div>
+                <div className="text-sm text-[#94A3B8]">ATR</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">
+                  {technicalData.bollingerMiddle[technicalData.bollingerMiddle.length - 1]?.toFixed(2) || 'N/A'}
+                </div>
+                <div className="text-sm text-[#94A3B8]">BB Middle</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-400">
+                  {(() => {
+                    const obvValue = technicalData.obv[technicalData.obv.length - 1];
+                    if (!obvValue) return 'N/A';
+                    const absValue = Math.abs(obvValue);
+                    if (absValue >= 1e9) return (obvValue / 1e9).toFixed(1) + 'B';
+                    if (absValue >= 1e6) return (obvValue / 1e6).toFixed(1) + 'M';
+                    if (absValue >= 1e3) return (obvValue / 1e3).toFixed(1) + 'K';
+                    return obvValue.toFixed(0);
+                  })()}
+                </div>
+                <div className="text-sm text-[#94A3B8]">OBV</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-400">
+                  {technicalData.donchianUpper[technicalData.donchianUpper.length - 1]?.toFixed(2) || 'N/A'}
+                </div>
+                <div className="text-sm text-[#94A3B8]">DC Upper</div>
               </div>
             </div>
           </CardContent>
