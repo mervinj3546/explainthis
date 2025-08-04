@@ -302,17 +302,15 @@ function calculateOverallScore(
   fundamentalsScore: number,
   technicalScore: number,
   sentimentScore: number,
-  aiScore: number,
   technicalRecommendation: TechnicalRecommendation
 ): { score: number; label: string; color: string } {
-  // Updated weights to include AI Analysis with news integration
-  // Weight: Fundamentals 30%, AI Analysis 20%, YTD 20%, Technical 20%, Sentiment 10%
+  // Updated weights without AI Analysis (excluded to reduce costs)
+  // Weight: Fundamentals 35%, YTD 25%, Technical 25%, Sentiment 15%
   const weights = {
-    ytd: 0.20,
-    fundamentals: 0.30,
-    technical: 0.20,
-    sentiment: 0.10,
-    ai: 0.20 // AI Analysis includes recent news and comprehensive analysis
+    ytd: 0.25,
+    fundamentals: 0.35,
+    technical: 0.25,
+    sentiment: 0.15
   };
 
   // Convert YTD to 0-100 scale
@@ -324,13 +322,12 @@ function calculateOverallScore(
   else if (ytdPerformance > -20) ytdScore = 30;
   else ytdScore = 20;
 
-  // Calculate weighted score
+  // Calculate weighted score (excluding AI Analysis)
   let weightedScore = 
     (ytdScore * weights.ytd) +
     (fundamentalsScore * weights.fundamentals) +
     (technicalScore * weights.technical) +
-    (sentimentScore * weights.sentiment) +
-    (aiScore * weights.ai); // AI Analysis with news integration
+    (sentimentScore * weights.sentiment);
 
   // Override logic: If technical is strong sell, be more bearish
   if (technicalRecommendation.overall === 'strong-sell') {
@@ -411,22 +408,7 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
     enabled: isAuthenticated, // Only fetch when authenticated
   });
 
-  const { data: aiAnalysisData } = useQuery<{ 
-    sentiment?: { 
-      recommendation?: 'bullish' | 'bearish' | 'hold' | 'neutral';
-      summary?: string;
-    } 
-  }>({
-    queryKey: ["/api/ai-analysis", ticker],
-    queryFn: async () => {
-      const response = await fetch(`/api/ai-analysis/${ticker}`);
-      if (!response.ok) throw new Error('Failed to fetch AI analysis');
-      return response.json();
-    },
-    staleTime: 16 * 60 * 60 * 1000, // 16 hours (same as AI analysis cache)
-    retry: 2,
-    enabled: isAuthenticated, // Only fetch when authenticated
-  });
+  // Remove AI analysis query to reduce costs - AI is now excluded from overall score calculation
   
   // For non-authenticated users, show gray badge with tooltip
   if (!isAuthenticated) {
@@ -464,21 +446,20 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
   const professionalScore = (sentimentData?.data?.professional?.score || 50);
   const sentimentScore = (retailScore + professionalScore) / 2;
 
-  // Calculate AI Analysis score
-  const aiScore = calculateAIScore(aiAnalysisData?.sentiment?.recommendation);
+  // AI Analysis is now excluded from calculations to reduce costs
+  // const aiScore = calculateAIScore(aiAnalysisData?.sentiment?.recommendation);
 
-  // Calculate overall assessment
+  // Calculate overall assessment (excluding AI Analysis)
   const overall = calculateOverallScore(
     ytdPerformance,
     fundamentalsScore,
     technicalScore,
     sentimentScore,
-    aiScore,
     technicalRecommendation
   );
 
-  // Don't show badge if we don't have enough data
-  const hasMinimumData = stockData && (fundamentalsData || technicalData || sentimentData || aiAnalysisData);
+  // Don't show badge if we don't have enough data (AI Analysis excluded)
+  const hasMinimumData = stockData && (fundamentalsData || technicalData || sentimentData);
   
   if (!hasMinimumData) {
     return null;
@@ -498,11 +479,10 @@ export function OverallSummaryBadge({ ticker }: OverallSummaryBadgeProps) {
         <div className="space-y-2">
           <p className="font-medium">Overall Score: {overall.score}/100</p>
           <div className="text-xs space-y-1">
-            <div>Fundamentals: {fundamentalsScore.toFixed(0)}/100 (30%)</div>
-            <div>AI Analysis: {aiScore.toFixed(0)}/100 (20%)</div>
-            <div>YTD Performance: {ytdPerformance.toFixed(1)}% (20%)</div>
-            <div>Technical: {technicalScore.toFixed(0)}/100 (20%)</div>
-            <div>Sentiment: {sentimentScore.toFixed(0)}/100 (10%)</div>
+            <div>Fundamentals: {fundamentalsScore.toFixed(0)}/100 (35%)</div>
+            <div>YTD Performance: {ytdPerformance.toFixed(1)}% (25%)</div>
+            <div>Technical: {technicalScore.toFixed(0)}/100 (25%)</div>
+            <div>Sentiment: {sentimentScore.toFixed(0)}/100 (15%)</div>
           </div>
           {technicalRecommendation.overall === 'strong-sell' && (
             <p className="text-xs text-red-400">

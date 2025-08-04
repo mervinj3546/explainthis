@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { storage } from './storage';
+import { makePolygonRequest } from './polygonRateLimit';
 import { fetchRSSNews, type RSSNewsItem } from './rssNews';
 
 interface NewsItem {
@@ -114,10 +115,9 @@ export async function getBasicStockData(req: Request, res: Response) {
         // Polygon aggregates endpoint for daily bars
         const polygonUrl = `https://api.polygon.io/v2/aggs/ticker/${normalizedTicker}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&limit=300&apikey=${polygonToken}`;
         
-        const polygonRes = await fetch(polygonUrl);
-        
-        if (polygonRes.ok) {
-          const polygonData = await polygonRes.json();
+        try {
+          // Use rate limiter for the API call
+          const polygonData = await makePolygonRequest(polygonUrl, normalizedTicker, 'quote');
           console.log(`Polygon response status: ${polygonData.status}, results count: ${polygonData.resultsCount || 0}`);
           
           if ((polygonData.status === "OK" || polygonData.status === "DELAYED") && polygonData.results && polygonData.results.length > 0) {
@@ -146,10 +146,8 @@ export async function getBasicStockData(req: Request, res: Response) {
           } else {
             console.log(`No YTD data available from Polygon: status=${polygonData.status}, message=${polygonData.message || 'Unknown'}`);
           }
-        } else {
-          console.log(`Polygon API error for ${normalizedTicker}: ${polygonRes.status} ${polygonRes.statusText}`);
-          const errorText = await polygonRes.text();
-          console.log(`Error details: ${errorText}`);
+        } catch (polygonError) {
+          console.log(`Polygon API error for ${normalizedTicker}:`, polygonError);
         }
       }
     } catch (error) {

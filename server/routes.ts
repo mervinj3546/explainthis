@@ -12,6 +12,7 @@ import { analyzeProfessionalSentiment, generateDemoSentiment, type ProfessionalS
 import { professionalSentimentCache, logCacheStats } from './sentimentCache';
 import { analyzeSubredditSentiments, type EnhancedSentimentData } from "./subredditSentiment";
 import { getAIAnalysis } from './aiAnalysis';
+import { getPolygonStats, debugPolygonQueue, getQueueInfo } from './polygonRateLimit';
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -862,10 +863,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             } catch (error) {
               console.error(`Error fetching technical data for ${symbol}:`, error);
-              // Return error response instead of mock data
+              // Return error response - no fallback data
               return res.status(500).json({
                 message: "Technical analysis temporarily unavailable",
-                error: "Failed to fetch real-time technical data"
+                error: "Failed to fetch real-time technical data",
+                details: error instanceof Error ? error.message : 'Unknown error'
               });
             }
             break;
@@ -883,13 +885,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Analysis endpoint with caching
-  app.get("/api/ai-analysis/:ticker", async (req, res) => {
+  // AI Analysis endpoint with caching - Premium feature only
+  app.get("/api/ai-analysis/:ticker", requireAuth, async (req: any, res) => {
     try {
       const { ticker } = req.params;
       
       if (!ticker || typeof ticker !== 'string') {
         return res.status(400).json({ message: "Valid ticker symbol required" });
+      }
+
+      // Check if user has premium access
+      const user = await storage.getUser(req.session.userId);
+      if (!user || (user.tier !== 'premium' && user.tier !== 'admin')) {
+        return res.status(403).json({ 
+          message: "Premium subscription required for AI analysis",
+          requiresUpgrade: true
+        });
       }
 
       console.log(`🤖 AI Analysis request for ${ticker.toUpperCase()}`);
@@ -952,9 +963,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Polygon API rate limiter monitoring endpoints
+  app.get("/api/polygon/stats", (req, res) => {
+    try {
+      const stats = getPolygonStats();
+      res.json({
+        rateLimiter: stats,
+        message: "Polygon API rate limiter stats (2 calls/minute limit - conservative mode)"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get Polygon rate limiter stats" });
+    }
+  });
+
+  app.get("/api/polygon/debug", (req, res) => {
+    try {
+      const debug = debugPolygonQueue();
+      res.json({
+        debug,
+        message: "Polygon API rate limiter debug information"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get Polygon rate limiter debug info" });
+    }
+  });
+
+  // Get queue position for a specific ticker
+  app.get("/api/polygon/queue/:ticker", (req, res) => {
+    try {
+      const { ticker } = req.params;
+      const { type = 'technical' } = req.query;
+      
+      if (!ticker) {
+        return res.status(400).json({ message: "Ticker symbol required" });
+      }
+      
+      const queueInfo = getQueueInfo(ticker, type as 'technical' | 'quote' | 'news');
+      
+      res.json({
+        ticker: ticker.toUpperCase(),
+        type,
+        ...queueInfo,
+        message: queueInfo.isQueued 
+          ? `Position ${queueInfo.position} in queue, estimated wait ${Math.round(queueInfo.estimatedWaitSeconds / 60)} minutes`
+          : "No queue - ready for processing"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get queue information" });
+    }
+  });
+
   // Log cache stats periodically
   setInterval(() => {
     logCacheStats();
+    
+    // Also log Polygon rate limiter stats
+    const polygonStats = getPolygonStats();
+    if (polygonStats.queueLength > 0 || polygonStats.callsThisMinute > 0) {
+      console.log(`📊 Polygon Rate Limiter: ${polygonStats.callsThisMinute}/2 calls this minute, ${polygonStats.queueLength} queued, ${polygonStats.totalProcessed} total processed`);
+    }
   }, 30 * 60 * 1000); // Every 30 minutes
 
   const httpServer = createServer(app);

@@ -38,7 +38,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -85,7 +85,8 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
       label: "AI ANALYSIS", 
       icon: Brain,
       shortLabel: "AI",
-      requiresAuth: true
+      requiresAuth: true,
+      requiresPremium: true // Add premium requirement
     },
     { 
       value: "fundamentals", 
@@ -342,6 +343,7 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
               
               const Icon = tab.icon;
               const isLocked = !isAuthenticated && tab.requiresAuth && canAnonymousAccess;
+              const isPremiumLocked = tab.requiresPremium && (!user || user.tier !== 'premium' && user.tier !== 'admin');
               
               if (isLocked) {
                 return (
@@ -358,6 +360,27 @@ export function ContentTabs({ tickerSymbol }: ContentTabsProps) {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Sign up to unlock {tab.label.toLowerCase()}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+
+              if (isPremiumLocked) {
+                return (
+                  <TooltipProvider key={tab.value}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 bg-transparent border-0 text-amber-600 cursor-not-allowed transition-all duration-200 rounded-lg tab-no-truncate">
+                          <Lock className="h-4 w-4" />
+                          <Icon className="h-5 w-5" />
+                          <span className="text-base font-semibold uppercase tracking-wide">
+                            {tab.label}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Upgrade to Premium for {tab.label.toLowerCase()}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

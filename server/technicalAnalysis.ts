@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { storage } from './storage';
+import { makePolygonRequest } from './polygonRateLimit';
 
 interface HistoricalPrice {
   date: string;
@@ -116,16 +117,11 @@ export async function getTechnicalIndicators(req: Request, res: Response) {
     const fromDate = sixMonthsAgo.toISOString().split('T')[0];
     const toDate = new Date().toISOString().split('T')[0];
     
-    // Fetch historical data from Polygon
+    // Fetch historical data from Polygon using rate limiter
     const polygonUrl = `https://api.polygon.io/v2/aggs/ticker/${normalizedTicker}/range/1/day/${fromDate}/${toDate}?adjusted=true&sort=asc&limit=200&apikey=${polygonToken}`;
     
-    const polygonRes = await fetch(polygonUrl);
-    
-    if (!polygonRes.ok) {
-      throw new Error(`Polygon API error: ${polygonRes.status} ${polygonRes.statusText}`);
-    }
-    
-    const polygonData = await polygonRes.json();
+    // Use rate limiter for the API call
+    const polygonData = await makePolygonRequest(polygonUrl, normalizedTicker, 'technical');
     
     if (polygonData.status !== "OK" && polygonData.status !== "DELAYED") {
       throw new Error(`No data available: ${polygonData.message || 'Unknown error'}`);
