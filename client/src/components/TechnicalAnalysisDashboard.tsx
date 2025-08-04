@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { BarChart3, TrendingUp, AlertTriangle } from "lucide-react";
+import { BarChart3, TrendingUp, AlertTriangle, Loader2, Clock } from "lucide-react";
 import { useTechnicalIndicators } from "@/hooks/use-technical-indicators";
 import { TradingViewMiniWidget } from "./charts/TradingViewMiniWidget";
 import { EMAChart } from "./charts/EMAChart";
@@ -23,11 +23,31 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
   if (isLoading) {
     return (
       <div className="space-y-6">
+        {/* Rate Limited Loading Message */}
+        <Card className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center space-x-3">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+              <div className="text-center">
+                <div className="text-white font-medium">Loading Technical Analysis</div>
+                <div className="text-sm text-[#94A3B8] flex items-center justify-center mt-1">
+                  <Clock className="h-4 w-4 mr-1" />
+                  Rate limited - may take 30-60 seconds
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Loading Skeleton Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="bg-gradient-to-b from-[#1E2227] to-[#181B20] border-[#2A2F36] shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
               <CardHeader>
-                <Skeleton className="h-6 w-32 bg-[#2A2F36]" />
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-6 w-32 bg-[#2A2F36]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                </div>
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-80 w-full bg-[#2A2F36]" />
@@ -106,33 +126,33 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">
-                  {technicalData.ema8[technicalData.ema8.length - 1]?.toFixed(2) || 'N/A'}
+                            <div className="text-center">
+                <div className="text-lg font-bold text-blue-400">
+                  {technicalData.ema8 && technicalData.ema8.length > 0 ? technicalData.ema8[technicalData.ema8.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">EMA 8</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-400">
-                  {technicalData.ema21[technicalData.ema21.length - 1]?.toFixed(2) || 'N/A'}
+                <div className="text-lg font-bold text-blue-400">
+                  {technicalData.ema21 && technicalData.ema21.length > 0 ? technicalData.ema21[technicalData.ema21.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">EMA 21</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">
-                  {technicalData.ema34[technicalData.ema34.length - 1]?.toFixed(2) || 'N/A'}
+                <div className="text-lg font-bold text-blue-400">
+                  {technicalData.ema34 && technicalData.ema34.length > 0 ? technicalData.ema34[technicalData.ema34.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">EMA 34</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-amber-400">
-                  {technicalData.ema50[technicalData.ema50.length - 1]?.toFixed(2) || 'N/A'}
+                <div className="text-lg font-bold text-blue-400">
+                  {technicalData.ema50 && technicalData.ema50.length > 0 ? technicalData.ema50[technicalData.ema50.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">EMA 50</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">
-                  {technicalData.rsi[technicalData.rsi.length - 1]?.toFixed(2) || 'N/A'}
+                <div className="text-lg font-bold text-purple-400">
+                  {technicalData.rsi && technicalData.rsi.length > 0 ? technicalData.rsi[technicalData.rsi.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">RSI</div>
               </div>
@@ -142,19 +162,20 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#2A2F36]">
               <div className="text-center">
                 <div className="text-lg font-bold text-purple-400">
-                  {technicalData.atr[technicalData.atr.length - 1]?.toFixed(3) || 'N/A'}
+                  {technicalData.atr && technicalData.atr.length > 0 ? technicalData.atr[technicalData.atr.length - 1]?.toFixed(3) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">ATR</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-blue-400">
-                  {technicalData.bollingerMiddle[technicalData.bollingerMiddle.length - 1]?.toFixed(2) || 'N/A'}
+                  {technicalData.bollingerMiddle && technicalData.bollingerMiddle.length > 0 ? technicalData.bollingerMiddle[technicalData.bollingerMiddle.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">BB Middle</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-green-400">
                   {(() => {
+                    if (!technicalData.obv || technicalData.obv.length === 0) return 'N/A';
                     const obvValue = technicalData.obv[technicalData.obv.length - 1];
                     if (!obvValue) return 'N/A';
                     const absValue = Math.abs(obvValue);
@@ -168,7 +189,7 @@ export function TechnicalAnalysisDashboard({ tickerSymbol }: TechnicalAnalysisDa
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-red-400">
-                  {technicalData.donchianUpper[technicalData.donchianUpper.length - 1]?.toFixed(2) || 'N/A'}
+                  {technicalData.donchianUpper && technicalData.donchianUpper.length > 0 ? technicalData.donchianUpper[technicalData.donchianUpper.length - 1]?.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-sm text-[#94A3B8]">DC Upper</div>
               </div>

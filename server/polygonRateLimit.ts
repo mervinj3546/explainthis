@@ -31,7 +31,7 @@ class PolygonRateLimit {
   private callsThisMinute: number = 0;
   private lastResetTime: number = Date.now();
   private isProcessing: boolean = false;
-  private readonly MAX_CALLS_PER_MINUTE = 2; // Conservative limit for reliability
+  private readonly MAX_CALLS_PER_MINUTE = 5; // Polygon Basic tier allows 5 calls/minute
   private readonly MINUTE_MS = 60 * 1000;
   private readonly MAX_RETRIES = 3;
   private readonly RETRY_DELAY = 2000; // 2 seconds
@@ -44,7 +44,7 @@ class PolygonRateLimit {
   constructor() {
     // Start the queue processor
     this.startQueueProcessor();
-    console.log('🚀 Polygon API Rate Limiter initialized (2 calls/minute - conservative mode)');
+    console.log('🚀 Polygon API Rate Limiter initialized (5 calls/minute - Polygon Basic tier)');
   }
 
   /**
